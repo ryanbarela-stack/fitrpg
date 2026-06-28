@@ -140,11 +140,13 @@
 
                 <div id="tier-label" class="text-[9px] font-bold uppercase tracking-widest font-mono text-slate-400 mb-2">Iron Recruit</div>
 
-                <div class="flex items-center justify-between w-32 mb-3 bg-slate-950 px-2 py-1 rounded border border-slate-800">
-                    <button onclick="cycleAvatar(-1)" class="text-xs text-cyan-400 font-bold hover:text-cyan-300 px-1">◀</button>
+                <div class="flex items-center justify-between w-32 mb-1 bg-slate-950 px-2 py-1 rounded border border-slate-800">
+                    <button onclick="cycleAvatar(-1)" id="avatar-btn-prev" class="text-xs text-cyan-400 font-bold hover:text-cyan-300 px-1">◀</button>
                     <span id="avatar-class-name" class="text-[10px] uppercase font-mono tracking-wider font-bold text-gray-300 text-center flex-1">Warrior</span>
-                    <button onclick="cycleAvatar(1)" class="text-xs text-cyan-400 font-bold hover:text-cyan-300 px-1">▶</button>
+                    <button onclick="cycleAvatar(1)" id="avatar-btn-next" class="text-xs text-cyan-400 font-bold hover:text-cyan-300 px-1">▶</button>
                 </div>
+                <div id="class-bonus-label" class="text-[9px] text-amber-400 font-mono text-center mb-1 leading-tight"></div>
+                <div id="class-lock-label" class="text-[9px] text-red-400 font-mono text-center mb-2 leading-tight"></div>
 
                 <div class="w-full space-y-3">
                     <div>
@@ -458,6 +460,23 @@
                     </div>
                 </section>
 
+                <!-- Class System -->
+                <section>
+                    <div class="text-[10px] text-cyan-400 font-bold uppercase tracking-widest mb-2 border-b border-slate-800 pb-1">Class Bonuses & Lock</div>
+                    <div class="space-y-1 text-gray-400 leading-relaxed">
+                        <div>Your selected character class grants a passive EXP bonus:</div>
+                        <div class="pl-2 space-y-0.5">
+                            <div><span class="text-red-400 font-bold">Warrior</span> — +20% STR EXP</div>
+                            <div><span class="text-amber-400 font-bold">Cleric</span> — +20% WIS &amp; INT EXP</div>
+                            <div><span class="text-orange-400 font-bold">Monk</span> — +20% AGI EXP, AGI workouts also restore mana</div>
+                            <div><span class="text-purple-400 font-bold">Wizard</span> — +20% INT EXP</div>
+                            <div><span class="text-slate-300 font-bold">Barbarian</span> — +30% STR EXP, but -10% WIS &amp; INT EXP</div>
+                            <div><span class="text-green-400 font-bold">Rogue</span> — +20% AGI EXP, duplicate penalty reduced to 35%</div>
+                        </div>
+                        <div class="text-slate-500 pt-1">⚠ Once you change your class, it locks for <span class="text-white">7 days</span>. Choose wisely.</div>
+                    </div>
+                </section>
+
                 <!-- Calendar -->
                 <section>
                     <div class="text-[10px] text-cyan-400 font-bold uppercase tracking-widest mb-2 border-b border-slate-800 pb-1">Quest Calendar</div>
@@ -608,7 +627,16 @@
             }
         ];
 
-        let userData = { avatarIndex: 0, history: [], health: 100, lastHealthTick: new Date().toISOString(), healthRegenDates: {}, mana: 3, manaShieldExpiry: null, lastManaRegen: null, foodLog: [] };
+        const classBonuses = {
+            Warrior:   { label: '+20% STR EXP',                           apply: (stat, base) => stat === 'str' ? base * 1.2 : base },
+            Cleric:    { label: '+20% WIS & INT EXP',                     apply: (stat, base) => ['wis','int'].includes(stat) ? base * 1.2 : base },
+            Monk:      { label: '+20% AGI EXP, +1 Mana on WIS/INT',       apply: (stat, base) => stat === 'agi' ? base * 1.2 : base },
+            Wizard:    { label: '+20% INT EXP',                           apply: (stat, base) => stat === 'int' ? base * 1.2 : base },
+            Barbarian: { label: '+30% STR EXP, -10% WIS & INT EXP',       apply: (stat, base) => stat === 'str' ? base * 1.3 : ['wis','int'].includes(stat) ? base * 0.9 : base },
+            Rogue:     { label: '+20% AGI EXP, 35% duplicate penalty',    apply: (stat, base) => stat === 'agi' ? base * 1.2 : base },
+        };
+
+        let userData = { avatarIndex: 0, history: [], health: 100, lastHealthTick: new Date().toISOString(), healthRegenDates: {}, mana: 3, manaShieldExpiry: null, lastManaRegen: null, foodLog: [], lastClassChange: null };
         const heatColors = ['#1e1b4b', '#312e81', '#2563eb', '#4f46e5', '#7c3aed', '#06b6d4'];
 
         let selectedStat = 'str';
@@ -799,6 +827,7 @@
                 if (userData.mana === undefined) userData.mana = 3;
                 if (userData.manaShieldExpiry === undefined) userData.manaShieldExpiry = null;
                 if (userData.lastManaRegen === undefined) userData.lastManaRegen = null;
+                if (userData.lastClassChange === undefined) userData.lastClassChange = null;
                 saveToStorage();
                 closeImportModal();
                 rebuildEngine();
@@ -841,6 +870,7 @@
                 if (userData.manaShieldExpiry === undefined) userData.manaShieldExpiry = null;
                 if (userData.lastManaRegen === undefined) userData.lastManaRegen = null;
                 if (userData.foodLog === undefined) userData.foodLog = [];
+                if (userData.lastClassChange === undefined) userData.lastClassChange = null;
             }
         }
 
@@ -881,7 +911,7 @@
         function resetData() {
             document.getElementById('settings-dropdown').classList.add('hidden');
             if(confirm("Are you sure you want to completely wipe your character record?")) {
-                userData = { avatarIndex: 0, history: [], health: 100, lastHealthTick: new Date().toISOString(), healthRegenDates: {}, mana: 3, manaShieldExpiry: null, lastManaRegen: null, foodLog: [] };
+                userData = { avatarIndex: 0, history: [], health: 100, lastHealthTick: new Date().toISOString(), healthRegenDates: {}, mana: 3, manaShieldExpiry: null, lastManaRegen: null, foodLog: [], lastClassChange: null };
                 saveToStorage();
                 rebuildEngine();
             }
@@ -891,8 +921,22 @@
             rebuildEngine();
         }
 
+        function getClassLockRemaining() {
+            if (!userData.lastClassChange) return 0;
+            const msLeft = (new Date(userData.lastClassChange).getTime() + 7 * 24 * 60 * 60 * 1000) - Date.now();
+            return Math.max(0, msLeft);
+        }
+
         function cycleAvatar(direction) {
+            const msLeft = getClassLockRemaining();
+            if (msLeft > 0) {
+                const days = Math.floor(msLeft / (1000 * 60 * 60 * 24));
+                const hours = Math.floor((msLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                alert(`Class locked for ${days}d ${hours}h. You can only change class once per week.`);
+                return;
+            }
             userData.avatarIndex = (userData.avatarIndex + direction + pixelAvatars.length) % pixelAvatars.length;
+            userData.lastClassChange = new Date().toISOString();
             saveToStorage();
             rebuildEngine();
         }
@@ -948,7 +992,10 @@
             }
 
             // Mana regen: WIS/INT workouts restore 1 mana segment, max once per 24 hours
-            if (['wis', 'int'].includes(selectedStat) && userData.mana < 3) {
+            // Monk bonus: also triggers on AGI workouts
+            const currentClass = pixelAvatars[userData.avatarIndex]?.name;
+            const manaStats = (currentClass === 'Monk') ? ['wis', 'int', 'agi'] : ['wis', 'int'];
+            if (manaStats.includes(selectedStat) && userData.mana < 3) {
                 const now = new Date();
                 const lastRegen = userData.lastManaRegen ? new Date(userData.lastManaRegen) : null;
                 const hoursSinceRegen = lastRegen ? (now - lastRegen) / (1000 * 60 * 60) : Infinity;
@@ -994,7 +1041,9 @@
 
                 const dayKey = `${log.date}_${log.name || log.exerciseId}`;
                 dailyActivityCount[dayKey] = (dailyActivityCount[dayKey] || 0) + 1;
-                const spamPenalty = dailyActivityCount[dayKey] > 1 ? 0.5 : 1.0;
+                const currentClass = pixelAvatars[userData.avatarIndex]?.name;
+                const dupPenalty = (currentClass === 'Rogue') ? 0.65 : 0.5;
+                const spamPenalty = dailyActivityCount[dayKey] > 1 ? dupPenalty : 1.0;
 
                 let loadMod = 1;
                 if (format === 'time') {
@@ -1003,8 +1052,11 @@
                     loadMod = 1 + (log.weight * 0.001) + (log.sets * 0.03) + ((log.reps || 10) * 0.005);
                 }
 
+                const classBonus = classBonuses[currentClass];
+                const expMult = classBonus ? classBonus.apply(statType, 1.0) : 1.0;
+
                 character.stats[statType] += 0.08 * loadMod * spamPenalty;
-                character.exp += Math.floor(baseExp * loadMod * spamPenalty);
+                character.exp += Math.floor(baseExp * loadMod * spamPenalty * expMult);
 
                 target.forEach(m => {
                     muscleHeat[m] = Math.min((muscleHeat[m] || 0) + 1, 5);
@@ -1085,6 +1137,28 @@
             tierLabel.style.color = activeTier.color;
 
             renderPixelAvatar(userData.avatarIndex);
+
+            // Class bonus label & lock countdown
+            const activeClass = pixelAvatars[userData.avatarIndex]?.name;
+            const bonusEl = document.getElementById('class-bonus-label');
+            const lockEl = document.getElementById('class-lock-label');
+            if (bonusEl && classBonuses[activeClass]) {
+                bonusEl.innerText = classBonuses[activeClass].label;
+            }
+            if (lockEl) {
+                const msLeft = getClassLockRemaining();
+                if (msLeft > 0) {
+                    const days = Math.floor(msLeft / (1000 * 60 * 60 * 24));
+                    const hours = Math.floor((msLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                    lockEl.innerText = `🔒 locked ${days}d ${hours}h`;
+                    document.getElementById('avatar-btn-prev').classList.add('opacity-30');
+                    document.getElementById('avatar-btn-next').classList.add('opacity-30');
+                } else {
+                    lockEl.innerText = userData.lastClassChange ? '✓ class change available' : '';
+                    document.getElementById('avatar-btn-prev').classList.remove('opacity-30');
+                    document.getElementById('avatar-btn-next').classList.remove('opacity-30');
+                }
+            }
             
             ['str', 'sta', 'agi', 'wis', 'int'].forEach(stat => {
                 document.getElementById(`stat-${stat}`).innerText = `Lv. ${attrLevels[stat]} (${char.stats[stat].toFixed(1)})`;
