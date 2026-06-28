@@ -497,6 +497,17 @@
         </div>
     </div>
 
+    <!-- Day Detail Modal -->
+    <div id="day-modal" class="hidden fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-purple-500/30 rounded-xl p-5 w-full max-w-sm shadow-2xl">
+            <div class="flex items-center justify-between mb-3">
+                <h3 id="day-modal-title" class="text-sm font-bold heading-font text-purple-400 uppercase tracking-wider"></h3>
+                <button onclick="closeDayModal()" class="text-slate-500 hover:text-white text-xl font-bold leading-none px-2 py-1 rounded transition">✕</button>
+            </div>
+            <div id="day-modal-body" class="space-y-2 max-h-72 overflow-y-auto text-xs font-mono"></div>
+        </div>
+    </div>
+
     <!-- Import Save Modal -->
     <div id="import-modal" class="hidden fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
         <div class="bg-slate-900 border border-purple-500/30 rounded-xl p-5 w-full max-w-sm shadow-2xl">
@@ -775,6 +786,41 @@
                 section.appendChild(list);
                 container.appendChild(section);
             });
+        }
+
+        function showDayModal(dateStr) {
+            const logs = userData.history.filter(l => l.date === dateStr);
+            const d = new Date(dateStr + 'T12:00:00');
+            const label = d.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' });
+            document.getElementById('day-modal-title').innerText = label;
+            const body = document.getElementById('day-modal-body');
+            if (logs.length === 0) {
+                body.innerHTML = '<div class="text-gray-500 italic text-center py-4">No workouts logged on this day.</div>';
+            } else {
+                const statColors = { str: 'text-red-400', sta: 'text-green-400', agi: 'text-amber-400', wis: 'text-cyan-400', int: 'text-fuchsia-400' };
+                body.innerHTML = logs.map(log => {
+                    const statType = log.statType || log.type || 'str';
+                    const name = log.name || log.exerciseId || 'Unknown';
+                    const detail = log.format === 'time'
+                        ? `${log.time} mins`
+                        : `${log.sets}×${log.reps} @ ${log.weight} lbs`;
+                    const muscles = log.target && log.target.length
+                        ? `<div class="text-slate-500 text-[10px] mt-0.5">${log.target.join(', ')}</div>` : '';
+                    return `<div class="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2">
+                        <div class="flex justify-between items-center">
+                            <span class="font-bold text-white">${escapeHtml(name)}</span>
+                            <span class="font-bold uppercase ${statColors[statType] || 'text-gray-400'}">[${statType.toUpperCase()}]</span>
+                        </div>
+                        <div class="text-gray-400 text-[10px] mt-0.5">${detail}</div>
+                        ${muscles}
+                    </div>`;
+                }).join('');
+            }
+            document.getElementById('day-modal').classList.remove('hidden');
+        }
+
+        function closeDayModal() {
+            document.getElementById('day-modal').classList.add('hidden');
         }
 
         function showAboutModal() {
@@ -1190,8 +1236,10 @@
             for (let day = 1; day <= 30; day++) {
                 let dayStr = `2026-06-${day.toString().padStart(2, '0')}`;
                 let cell = document.createElement('div');
-                cell.className = `p-2 text-xs rounded border text-center transition-all ${calMap[dayStr] ? 'bg-purple-900/60 border-cyan-400 text-cyan-300 font-bold' : 'bg-slate-900/30 border-slate-800 text-gray-500'}`;
+                const hasWorkout = !!calMap[dayStr];
+                cell.className = `p-2 text-xs rounded border text-center transition-all ${hasWorkout ? 'bg-purple-900/60 border-cyan-400 text-cyan-300 font-bold cursor-pointer hover:bg-purple-800/80' : 'bg-slate-900/30 border-slate-800 text-gray-500 cursor-pointer hover:border-slate-600'}`;
                 cell.innerText = day;
+                cell.onclick = () => showDayModal(dayStr);
                 calGrid.appendChild(cell);
             }
 
