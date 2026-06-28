@@ -1,0 +1,1148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FitRPG - Citadel Engine</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@500;600;700&display=swap');
+        
+        body {
+            font-family: 'Rajdhani', sans-serif;
+            background-color: #06070a;
+            color: #e2e8f0;
+        }
+        .heading-font {
+            font-family: 'Orbitron', sans-serif;
+        }
+        .heat-target {
+            transition: fill 0.4s ease, opacity 0.4s ease;
+            cursor: pointer;
+            opacity: 0.75;
+            mix-blend-mode: screen;
+        }
+        .heat-target:hover {
+            opacity: 0.95;
+        }
+        /* Prevent iOS Safari from zooming in on input focus */
+        @media (max-width: 768px) {
+            input[type="text"],
+            input[type="number"],
+            input[type="date"] {
+                font-size: 16px;
+            }
+        }
+
+        /* HARDCORE PROGRESSION ARTIFACT BORDERS */
+        .tier-1 { border: 1px solid #334155; box-shadow: none; }
+        .tier-2 { border: 2px solid #b45309; box-shadow: 0 0 10px rgba(180,83,9,0.6), 0 0 20px rgba(180,83,9,0.2); animation: pulseGlow 3s infinite ease-in-out; }
+        .tier-3 { border: 2px solid #94a3b8; box-shadow: 0 0 14px rgba(148,163,184,0.7), 0 0 28px rgba(148,163,184,0.2); animation: pulseGlow 2.5s infinite ease-in-out; }
+        .tier-4 { border: 2px solid #eab308; box-shadow: 0 0 18px rgba(234,179,8,0.8), 0 0 36px rgba(234,179,8,0.3); animation: pulseGlow 2s infinite ease-in-out; }
+        .tier-5 { border: 2px solid #10b981; box-shadow: 0 0 20px rgba(16,185,129,0.8), 0 0 40px rgba(16,185,129,0.3), inset 0 0 12px rgba(16,185,129,0.1); animation: pulseGlow 1.8s infinite ease-in-out; }
+        .tier-6 { border: 2px solid #a855f7; box-shadow: 0 0 24px rgba(168,85,247,0.9), 0 0 48px rgba(168,85,247,0.4), inset 0 0 16px rgba(168,85,247,0.15); animation: pulseGlow 1.4s infinite ease-in-out; }
+        .tier-7 { border: 3px solid #c084fc; box-shadow: 0 0 30px rgba(192,132,252,1), 0 0 60px rgba(6,182,212,0.5), inset 0 0 20px rgba(192,132,252,0.2); animation: mythicGlow 3s infinite linear; }
+
+        @keyframes pulseGlow {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.55; }
+        }
+        @keyframes mythicGlow {
+            0%   { border-color: #c084fc; box-shadow: 0 0 30px rgba(192,132,252,1), 0 0 60px rgba(192,132,252,0.4), inset 0 0 20px rgba(192,132,252,0.2); }
+            25%  { border-color: #06b6d4; box-shadow: 0 0 30px rgba(6,182,212,1),   0 0 60px rgba(6,182,212,0.4),   inset 0 0 20px rgba(6,182,212,0.2); }
+            50%  { border-color: #eab308; box-shadow: 0 0 30px rgba(234,179,8,1),   0 0 60px rgba(234,179,8,0.4),   inset 0 0 20px rgba(234,179,8,0.2); }
+            75%  { border-color: #ef4444; box-shadow: 0 0 30px rgba(239,68,68,1),   0 0 60px rgba(239,68,68,0.4),   inset 0 0 20px rgba(239,68,68,0.2); }
+            100% { border-color: #c084fc; box-shadow: 0 0 30px rgba(192,132,252,1), 0 0 60px rgba(192,132,252,0.4), inset 0 0 20px rgba(192,132,252,0.2); }
+        }
+    </style>
+</head>
+<body class="p-4 md:p-6 min-h-screen flex flex-col items-center justify-center">
+
+    <div id="app-screen" class="w-full max-w-7xl flex flex-col items-center">
+        <header class="w-full mb-4 md:mb-6 border-b border-purple-900/40 pb-4">
+            <div class="bg-slate-900/80 px-4 py-3 rounded-xl border border-purple-500/20 shadow-xl w-full">
+                <!-- Row 1: Title + Level + Settings button -->
+                <div class="flex items-center gap-3 mb-3">
+                    <div class="shrink-0">
+                        <h1 class="text-xl md:text-2xl font-bold heading-font text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-cyan-400 tracking-wider">FITRPG</h1>
+                        <p class="text-[9px] text-red-400 font-mono uppercase tracking-wider font-bold leading-tight">Citadel Engine v5.3</p>
+                    </div>
+                    <div class="h-8 w-[1px] bg-slate-700 shrink-0"></div>
+                    <div class="shrink-0 text-center">
+                        <div class="text-[10px] text-purple-400 font-bold uppercase tracking-widest">Hero Lv.</div>
+                        <div id="char-level" class="text-2xl font-bold heading-font text-cyan-400 leading-none">1</div>
+                    </div>
+                    <div class="flex-1"></div>
+                    <div class="relative inline-block text-left shrink-0">
+                        <button id="settings-menu-btn" onclick="toggleSettingsMenu(event)" class="text-xs text-slate-400 hover:text-white font-bold uppercase border border-slate-700 hover:border-slate-500 px-2.5 py-2 rounded-lg transition flex items-center gap-1.5 min-h-[36px]">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 shrink-0">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127c.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.43l-1.003.754c-.29.218-.44.573-.398.935.008.063.014.125.014.188 0 .063-.006.124-.014.188-.041.362.11.717.398.935l1.003.754a1.125 1.125 0 0 1 .26 1.43l-1.296 2.247a1.125 1.125 0 0 1-1.37.49l-1.216-.456c-.356-.133-.751-.072-1.076.124a6.57 6.57 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.43l1.004-.754c.29-.218.44-.573.398-.935a6.602 6.602 0 0 1 0-.376c.041-.362-.11-.717-.398-.935l-1.004-.754a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.49l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.28Z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                            </svg>
+                            <span class="hidden sm:inline">Engine Menu</span>
+                        </button>
+                        <div id="settings-dropdown" class="hidden absolute right-0 mt-2 w-52 bg-slate-950 border border-slate-800 rounded-xl shadow-2xl z-50 p-1.5 font-mono">
+                            <div class="text-[9px] text-slate-500 font-bold uppercase tracking-wider px-2 py-1 border-b border-slate-900 mb-1">System Commands</div>
+                            <button onclick="showAboutModal()" class="w-full text-left text-[11px] text-purple-300 hover:bg-purple-500/10 font-bold uppercase px-2.5 py-2 rounded-lg transition flex items-center gap-2">
+                                <span>?</span> Guide &amp; About
+                            </button>
+                            <div class="border-t border-slate-900 my-1"></div>
+                            <button onclick="exportData()" class="w-full text-left text-[11px] text-cyan-400 hover:bg-cyan-500/10 font-bold uppercase px-2.5 py-2 rounded-lg transition flex items-center gap-2">
+                                <span>↓</span> Export Save
+                            </button>
+                            <button onclick="showImportModal()" class="w-full text-left text-[11px] text-purple-400 hover:bg-purple-500/10 font-bold uppercase px-2.5 py-2 rounded-lg transition flex items-center gap-2">
+                                <span>↑</span> Import Save
+                            </button>
+                            <div class="border-t border-slate-900 my-1"></div>
+                            <button onclick="resetData()" class="w-full text-left text-[11px] text-red-400 hover:bg-red-500/10 font-bold uppercase px-2.5 py-2 rounded-lg transition flex items-center gap-2">
+                                <span>⚠</span> Clear Profile Sync
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <!-- Row 2: Bars (full width) -->
+                <div class="w-full">
+                    <div class="flex justify-between text-[10px] font-bold mb-0.5 font-mono">
+                        <span class="text-gray-400">EXP</span>
+                        <span id="exp-text" class="text-cyan-400">0 / 250</span>
+                    </div>
+                    <div class="w-full bg-slate-800 rounded-full h-2.5 overflow-hidden">
+                        <div id="exp-bar" class="bg-gradient-to-r from-purple-500 to-cyan-500 h-full w-0 transition-all duration-500"></div>
+                    </div>
+                    <div class="flex justify-between text-[10px] font-bold mt-1.5 mb-0.5 font-mono">
+                        <span class="text-red-400">HP</span>
+                        <span id="health-text" class="text-red-400">100%</span>
+                    </div>
+                    <div class="w-full bg-slate-800 rounded-full h-2.5 overflow-hidden">
+                        <div id="health-bar" class="bg-gradient-to-r from-red-800 to-red-500 h-full transition-all duration-500" style="width: 100%"></div>
+                    </div>
+                    <div class="flex justify-between items-center mt-1.5 mb-0.5">
+                        <span class="text-[10px] text-blue-400 font-bold font-mono uppercase tracking-wider">Mana</span>
+                        <span id="mana-shield-text" class="text-[9px] text-slate-500 font-mono"></span>
+                    </div>
+                    <!-- py-2 -my-2 expands the tap area without changing visual height -->
+                    <div class="flex gap-1 cursor-pointer py-2 -my-2" onclick="activateManaShield()">
+                        <div id="mana-seg-0" class="flex-1 h-2.5 rounded transition-all duration-300 bg-blue-500" style="box-shadow: 0 0 6px rgba(59,130,246,0.8)"></div>
+                        <div id="mana-seg-1" class="flex-1 h-2.5 rounded transition-all duration-300 bg-blue-500" style="box-shadow: 0 0 6px rgba(59,130,246,0.8)"></div>
+                        <div id="mana-seg-2" class="flex-1 h-2.5 rounded transition-all duration-300 bg-blue-500" style="box-shadow: 0 0 6px rgba(59,130,246,0.8)"></div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div class="w-full grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <div class="lg:col-span-3 bg-slate-900/50 p-4 rounded-xl border border-slate-800 flex flex-col items-center">
+                <h2 class="text-sm font-bold heading-font text-purple-400 mb-3 uppercase tracking-wider w-full border-b border-slate-800 pb-1 text-center">Hero Profile</h2>
+                
+                <div id="avatar-container" class="relative w-28 h-28 bg-gradient-to-b from-purple-900/10 to-cyan-900/10 rounded-xl flex items-center justify-center mb-1 overflow-hidden tier-1">
+                    <svg id="avatar-svg" class="w-20 h-20" viewBox="0 0 16 16" shape-rendering="crispEdges" xmlns="http://www.w3.org/2000/svg"></svg>
+                </div>
+
+                <div id="tier-label" class="text-[9px] font-bold uppercase tracking-widest font-mono text-slate-400 mb-2">Iron Recruit</div>
+
+                <div class="flex items-center justify-between w-32 mb-3 bg-slate-950 px-2 py-1 rounded border border-slate-800">
+                    <button onclick="cycleAvatar(-1)" class="text-xs text-cyan-400 font-bold hover:text-cyan-300 px-1">◀</button>
+                    <span id="avatar-class-name" class="text-[10px] uppercase font-mono tracking-wider font-bold text-gray-300 text-center flex-1">Warrior</span>
+                    <button onclick="cycleAvatar(1)" class="text-xs text-cyan-400 font-bold hover:text-cyan-300 px-1">▶</button>
+                </div>
+
+                <div class="w-full space-y-3">
+                    <div>
+                        <div class="flex justify-between text-[11px] font-bold mb-0.5"><span class="text-red-400">STR (Strength)</span><span id="stat-str" class="text-white font-mono">Lv. 1 (10.0)</span></div>
+                        <div class="w-full bg-slate-800 h-1 rounded-full"><div id="bar-str" class="bg-red-500 h-full transition-all duration-300" style="width: 0%"></div></div>
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-[11px] font-bold mb-0.5"><span class="text-green-400">STA (Stamina)</span><span id="stat-sta" class="text-white font-mono">Lv. 1 (10.0)</span></div>
+                        <div class="w-full bg-slate-800 h-1 rounded-full"><div id="bar-sta" class="bg-green-500 h-full transition-all duration-300" style="width: 0%"></div></div>
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-[11px] font-bold mb-0.5"><span class="text-amber-400">AGI (Agility)</span><span id="stat-agi" class="text-white font-mono">Lv. 1 (10.0)</span></div>
+                        <div class="w-full bg-slate-800 h-1 rounded-full"><div id="bar-agi" class="bg-amber-500 h-full transition-all duration-300" style="width: 0%"></div></div>
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-[11px] font-bold mb-0.5"><span class="text-cyan-400">WIS (Wisdom)</span><span id="stat-wis" class="text-white font-mono">Lv. 1 (10.0)</span></div>
+                        <div class="w-full bg-slate-800 h-1 rounded-full"><div id="bar-wis" class="bg-cyan-500 h-full transition-all duration-300" style="width: 0%"></div></div>
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-[11px] font-bold mb-0.5"><span class="text-fuchsia-400">INT (Intelligence)</span><span id="stat-int" class="text-white font-mono">Lv. 1 (10.0)</span></div>
+                        <div class="w-full bg-slate-800 h-1 rounded-full"><div id="bar-int" class="bg-fuchsia-500 h-full transition-all duration-300" style="width: 0%"></div></div>
+                    </div>
+                </div>
+                
+                <div class="mt-4 p-2 bg-slate-950 rounded border border-red-900/30 text-[10px] text-gray-400 font-mono space-y-1 w-full">
+                    <div class="text-red-400 font-bold uppercase tracking-wider text-center">Citadel Progression Rules:</div>
+                    <div>• Level cap tied to lowest single attribute level.</div>
+                    <div>• Same-day training duplicates trigger a -50% EXP penalty.</div>
+                </div>
+            </div>
+
+            <div class="lg:col-span-5 space-y-4">
+                <div class="bg-slate-900/50 p-4 rounded-xl border border-slate-800">
+                    <h2 class="text-sm font-bold heading-font text-purple-400 mb-3 uppercase tracking-wider border-b border-slate-800 pb-1">Log Exercise Quest</h2>
+                    <div class="space-y-3">
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-[10px] text-gray-400 uppercase font-bold mb-0.5">Exercise Name</label>
+                                <input type="text" id="input-exercise-name" placeholder="e.g. Pull-ups" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-2 py-1.5 text-white text-xs placeholder-slate-600">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] text-gray-400 uppercase font-bold mb-0.5">Date Completed</label>
+                                <input type="date" id="input-date" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-2 py-1.5 text-white text-xs text-center">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-[10px] text-gray-400 uppercase font-bold mb-1">Stat Type</label>
+                            <div class="flex gap-1.5 flex-wrap">
+                                <button type="button" onclick="selectStat('str')" id="stat-btn-str" class="stat-pill px-2.5 py-1 rounded text-[10px] font-bold uppercase border transition-colors border-red-500 bg-red-900/40 text-red-400">STR</button>
+                                <button type="button" onclick="selectStat('sta')" id="stat-btn-sta" class="stat-pill px-2.5 py-1 rounded text-[10px] font-bold uppercase border transition-colors border-slate-700 bg-slate-800 text-green-400">STA</button>
+                                <button type="button" onclick="selectStat('agi')" id="stat-btn-agi" class="stat-pill px-2.5 py-1 rounded text-[10px] font-bold uppercase border transition-colors border-slate-700 bg-slate-800 text-amber-400">AGI</button>
+                                <button type="button" onclick="selectStat('wis')" id="stat-btn-wis" class="stat-pill px-2.5 py-1 rounded text-[10px] font-bold uppercase border transition-colors border-slate-700 bg-slate-800 text-cyan-400">WIS</button>
+                                <button type="button" onclick="selectStat('int')" id="stat-btn-int" class="stat-pill px-2.5 py-1 rounded text-[10px] font-bold uppercase border transition-colors border-slate-700 bg-slate-800 text-fuchsia-400">INT</button>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-[10px] text-gray-400 uppercase font-bold mb-1">Format</label>
+                            <div class="flex gap-1.5">
+                                <button type="button" onclick="selectFormat('weight')" id="fmt-btn-weight" class="fmt-pill px-3 py-1 rounded text-[10px] font-bold uppercase border transition-colors border-purple-500 bg-purple-900/40 text-purple-300">Weight-Based</button>
+                                <button type="button" onclick="selectFormat('time')" id="fmt-btn-time" class="fmt-pill px-3 py-1 rounded text-[10px] font-bold uppercase border transition-colors border-slate-700 bg-slate-800 text-slate-400">Time-Based</button>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-[10px] text-gray-400 uppercase font-bold mb-1">Target Muscles <span class="text-slate-600 font-normal normal-case">(optional)</span></label>
+                            <div class="flex flex-wrap gap-1">
+                                <button type="button" onclick="toggleMuscle('chest')"     id="mus-chest"     class="muscle-tag px-2 py-0.5 rounded text-[9px] font-bold uppercase border transition-colors border-slate-700 bg-slate-800 text-slate-400">Chest</button>
+                                <button type="button" onclick="toggleMuscle('back')"      id="mus-back"      class="muscle-tag px-2 py-0.5 rounded text-[9px] font-bold uppercase border transition-colors border-slate-700 bg-slate-800 text-slate-400">Back</button>
+                                <button type="button" onclick="toggleMuscle('biceps')"    id="mus-biceps"    class="muscle-tag px-2 py-0.5 rounded text-[9px] font-bold uppercase border transition-colors border-slate-700 bg-slate-800 text-slate-400">Biceps</button>
+                                <button type="button" onclick="toggleMuscle('triceps')"   id="mus-triceps"   class="muscle-tag px-2 py-0.5 rounded text-[9px] font-bold uppercase border transition-colors border-slate-700 bg-slate-800 text-slate-400">Triceps</button>
+                                <button type="button" onclick="toggleMuscle('traps')"     id="mus-traps"     class="muscle-tag px-2 py-0.5 rounded text-[9px] font-bold uppercase border transition-colors border-slate-700 bg-slate-800 text-slate-400">Traps</button>
+                                <button type="button" onclick="toggleMuscle('shoulders')" id="mus-shoulders" class="muscle-tag px-2 py-0.5 rounded text-[9px] font-bold uppercase border transition-colors border-slate-700 bg-slate-800 text-slate-400">Shoulders</button>
+                                <button type="button" onclick="toggleMuscle('core')"      id="mus-core"      class="muscle-tag px-2 py-0.5 rounded text-[9px] font-bold uppercase border transition-colors border-slate-700 bg-slate-800 text-slate-400">Core</button>
+                                <button type="button" onclick="toggleMuscle('quads')"     id="mus-quads"     class="muscle-tag px-2 py-0.5 rounded text-[9px] font-bold uppercase border transition-colors border-slate-700 bg-slate-800 text-slate-400">Quads</button>
+                                <button type="button" onclick="toggleMuscle('hams')"      id="mus-hams"      class="muscle-tag px-2 py-0.5 rounded text-[9px] font-bold uppercase border transition-colors border-slate-700 bg-slate-800 text-slate-400">Hams</button>
+                                <button type="button" onclick="toggleMuscle('calves')"    id="mus-calves"    class="muscle-tag px-2 py-0.5 rounded text-[9px] font-bold uppercase border transition-colors border-slate-700 bg-slate-800 text-slate-400">Calves</button>
+                                <button type="button" onclick="toggleMuscle('glutes')"    id="mus-glutes"    class="muscle-tag px-2 py-0.5 rounded text-[9px] font-bold uppercase border transition-colors border-slate-700 bg-slate-800 text-slate-400">Glutes</button>
+                                <button type="button" onclick="toggleMuscle('groin')"     id="mus-groin"     class="muscle-tag px-2 py-0.5 rounded text-[9px] font-bold uppercase border transition-colors border-slate-700 bg-slate-800 text-slate-400">Groin</button>
+                            </div>
+                        </div>
+
+                        <div id="metrics-weight" class="grid grid-cols-3 gap-2">
+                            <div><label class="block text-[10px] text-gray-400 uppercase font-bold mb-0.5">Sets</label><input type="number" id="input-sets" value="3" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-1 text-center text-xs text-white"></div>
+                            <div><label class="block text-[10px] text-gray-400 uppercase font-bold mb-0.5">Reps</label><input type="number" id="input-reps" value="10" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-1 text-center text-xs text-white"></div>
+                            <div><label class="block text-[10px] text-gray-400 uppercase font-bold mb-0.5">Weight (lbs)</label><input type="number" id="input-weight" value="45" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-1 text-center text-xs text-white"></div>
+                        </div>
+
+                        <div id="metrics-time" class="hidden">
+                            <label class="block text-[10px] text-gray-400 uppercase font-bold mb-0.5">Time Spent (Minutes)</label>
+                            <input type="number" id="input-time" value="30" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-1.5 text-center text-xs text-white">
+                        </div>
+
+                        <button onclick="submitWorkout()" class="w-full bg-gradient-to-r from-purple-600 to-cyan-600 text-white font-bold py-3 rounded-lg text-xs uppercase heading-font tracking-wider transition min-h-[44px]">Execute Quest</button>
+                    </div>
+                </div>
+
+                <div class="bg-slate-900/50 p-4 rounded-xl border border-slate-800">
+                    <div class="flex justify-between items-center border-b border-slate-800 pb-1.5 mb-2">
+                        <h2 class="text-sm font-bold heading-font text-purple-400 uppercase tracking-wider">Quest Calendar Matrix</h2>
+                        <span class="text-[11px] text-gray-400 font-mono">June 2026</span>
+                    </div>
+                    <div class="grid grid-cols-7 gap-1 text-center text-[10px] font-bold uppercase text-gray-500 mb-1">
+                        <div>Su</div><div>Mo</div><div>Tu</div><div>We</div><div>Th</div><div>Fr</div><div>Sa</div>
+                    </div>
+                    <div id="calendar-days-grid" class="grid grid-cols-7 gap-1.5"></div>
+                </div>
+            </div>
+
+            <div class="lg:col-span-4 space-y-4">
+                <div class="bg-slate-900/50 p-4 rounded-xl border border-slate-800 flex flex-col items-center">
+                    <h2 class="text-sm font-bold heading-font text-purple-400 mb-1 uppercase tracking-wider w-full border-b border-slate-800 pb-1 text-center">Anatomical Matrix</h2>
+                    <p class="text-[10px] text-gray-500 uppercase tracking-widest font-mono mb-3">High-Fidelity Overlay Feed</p>
+                    
+                    <div class="relative w-full max-w-[310px] aspect-[4/3] bg-slate-950 rounded-xl p-2 border border-slate-800/80 shadow-inner overflow-hidden">
+                        <div class="absolute inset-0 opacity-10 bg-[linear-gradient(to_right,#808080_1px,transparent_1px),linear-gradient(to_bottom,#808080_1px,transparent_1px)] bg-[size:14px_24px]"></div>
+
+                        <svg viewBox="0 0 400 300" class="w-full h-full relative z-10" xmlns="http://www.w3.org/2000/svg">
+                            <!-- ANTERIOR VIEW -->
+                            <g transform="translate(10, 5)">
+                                <g stroke="#1e293b" stroke-width="1" fill="none" opacity="0.6">
+                                    <path d="M90,25 C82,25 80,10 90,10 C100,10 98,25 90,25 Z"/>
+                                    <path d="M90,25 L90,140 M60,50 L120,50 M65,140 L115,140"/>
+                                    <path d="M50,55 L35,115 M130,55 L145,115 M65,140 L60,250 M115,140 L120,250"/>
+                                </g>
+                                <!-- Traps -->
+                                <path id="m-traps"   class="heat-target" d="M82,28 C72,34 68,42 62,45 L65,49 C74,47 82,41 86,38 Z" fill="#1e1b4b"/>
+                                <path id="m-traps-r" class="heat-target" d="M98,28 C108,34 112,42 118,45 L115,49 C106,47 98,41 94,38 Z" fill="#1e1b4b"/>
+                                <!-- Shoulders -->
+                                <path id="m-shoulders-f"   class="heat-target" d="M60,46 C52,51 46,62 48,76 C54,73 59,64 62,56 Z" fill="#1e1b4b"/>
+                                <path id="m-shoulders-f-r" class="heat-target" d="M120,46 C128,51 134,62 132,76 C126,73 121,64 118,56 Z" fill="#1e1b4b"/>
+                                <!-- Chest -->
+                                <path id="m-chest-l" class="heat-target" d="M90,52 L64,52 C62,68 66,82 90,82 Z" fill="#1e1b4b"/>
+                                <path id="m-chest-r" class="heat-target" d="M90,52 L116,52 C118,68 114,82 90,82 Z" fill="#1e1b4b"/>
+                                <!-- Biceps -->
+                                <path id="m-biceps-l" class="heat-target" d="M48,80 C40,92 40,106 49,114 C52,104 52,90 50,80 Z" fill="#1e1b4b"/>
+                                <path id="m-biceps-r" class="heat-target" d="M132,80 C140,92 140,106 131,114 C128,104 128,90 130,80 Z" fill="#1e1b4b"/>
+                                <!-- Forearms (anterior / brachioradialis) -->
+                                <path id="m-forearm-l" class="heat-target" d="M49,115 C41,120 37,134 37,150 C41,148 46,132 50,117 Z" fill="#1e1b4b"/>
+                                <path id="m-forearm-r" class="heat-target" d="M131,115 C139,120 143,134 143,150 C139,148 134,132 130,117 Z" fill="#1e1b4b"/>
+                                <!-- Abs -->
+                                <path id="m-abs" class="heat-target" d="M68,85 L112,85 C110,112 107,134 90,146 C73,134 70,112 68,85 Z" fill="#1e1b4b"/>
+                                <!-- Obliques -->
+                                <path id="m-obliques-l" class="heat-target" d="M66,84 C61,96 60,114 62,134 L66,140 L68,140 C67,118 67,100 68,84 Z" fill="#1e1b4b"/>
+                                <path id="m-obliques-r" class="heat-target" d="M114,84 C119,96 120,114 118,134 L114,140 L112,140 C113,118 113,100 112,84 Z" fill="#1e1b4b"/>
+                                <!-- Quads -->
+                                <path id="m-quads-l" class="heat-target" d="M64,152 C58,166 55,198 67,230 C75,214 77,182 74,154 Z" fill="#1e1b4b"/>
+                                <path id="m-quads-r" class="heat-target" d="M116,152 C122,166 125,198 113,230 C105,214 103,182 106,154 Z" fill="#1e1b4b"/>
+                                <!-- Calves / Tibialis anterior -->
+                                <path id="m-calves-l" class="heat-target" d="M66,232 C63,242 62,254 64,262 C69,260 71,248 70,232 Z" fill="#1e1b4b"/>
+                                <path id="m-calves-r" class="heat-target" d="M114,232 C117,242 118,254 116,262 C111,260 109,248 110,232 Z" fill="#1e1b4b"/>
+                                <text x="90" y="275" fill="#22d3ee" font-family="Orbitron" font-size="10" text-anchor="middle" letter-spacing="1" opacity="0.8">ANTERIOR</text>
+                            </g>
+
+                            <!-- POSTERIOR VIEW -->
+                            <g transform="translate(210, 5)">
+                                <g stroke="#1e293b" stroke-width="1" fill="none" opacity="0.6">
+                                    <circle cx="90" cy="17" r="8"/>
+                                    <path d="M90,25 L90,140 M60,50 L120,50 M65,140 L115,140"/>
+                                    <path d="M50,55 L35,115 M130,55 L145,115 M65,140 L60,250 M115,140 L120,250"/>
+                                </g>
+                                <!-- Traps (posterior) -->
+                                <path id="m-traps-b" class="heat-target" d="M90,32 L68,42 C78,58 84,70 90,75 C96,70 102,58 112,42 Z" fill="#1e1b4b"/>
+                                <!-- Shoulders (posterior) -->
+                                <path id="m-shoulders-b"   class="heat-target" d="M64,43 C54,47 48,60 50,73 C57,70 61,62 64,52 Z" fill="#1e1b4b"/>
+                                <path id="m-shoulders-b-r" class="heat-target" d="M116,43 C126,47 132,60 130,73 C123,70 119,62 116,52 Z" fill="#1e1b4b"/>
+                                <!-- Lats -->
+                                <path id="m-lats-l" class="heat-target" d="M68,72 C66,86 70,104 86,110 C84,96 82,82 86,75 Z" fill="#1e1b4b"/>
+                                <path id="m-lats-r" class="heat-target" d="M112,72 C114,86 110,104 94,110 C96,96 98,82 94,75 Z" fill="#1e1b4b"/>
+                                <!-- Rhomboids / Mid-traps -->
+                                <path id="m-rhomboids" class="heat-target" d="M80,76 L100,76 C98,86 94,92 90,94 C86,92 82,86 80,76 Z" fill="#1e1b4b"/>
+                                <!-- Triceps -->
+                                <path id="m-triceps-l" class="heat-target" d="M50,78 C42,90 41,106 49,116 C53,106 54,92 52,80 Z" fill="#1e1b4b"/>
+                                <path id="m-triceps-r" class="heat-target" d="M130,78 C138,90 139,106 131,116 C127,106 126,92 128,80 Z" fill="#1e1b4b"/>
+                                <!-- Forearms (posterior) -->
+                                <path id="m-forearm-b-l" class="heat-target" d="M48,117 C40,123 36,136 37,152 C41,150 46,136 49,119 Z" fill="#1e1b4b"/>
+                                <path id="m-forearm-b-r" class="heat-target" d="M132,117 C140,123 144,136 143,152 C139,150 134,136 131,119 Z" fill="#1e1b4b"/>
+                                <!-- Lower back -->
+                                <path id="m-lower-back" class="heat-target" d="M74,112 L106,112 C104,126 101,134 90,140 C79,134 76,126 74,112 Z" fill="#1e1b4b"/>
+                                <!-- Glutes -->
+                                <path id="m-glutes"   class="heat-target" d="M65,145 C77,140 90,143 90,160 C80,162 67,170 62,158 Z" fill="#1e1b4b"/>
+                                <path id="m-glutes-r" class="heat-target" d="M115,145 C103,140 90,143 90,160 C100,162 113,170 118,158 Z" fill="#1e1b4b"/>
+                                <!-- Hamstrings -->
+                                <path id="m-hamstrings-l" class="heat-target" d="M65,164 C59,180 57,208 66,232 C73,218 75,187 72,166 Z" fill="#1e1b4b"/>
+                                <path id="m-hamstrings-r" class="heat-target" d="M115,164 C121,180 123,208 114,232 C107,218 105,187 108,166 Z" fill="#1e1b4b"/>
+                                <!-- Calves (gastrocnemius) -->
+                                <path id="m-calves-b-l" class="heat-target" d="M66,234 C61,245 62,256 66,263 C72,261 73,249 70,234 Z" fill="#1e1b4b"/>
+                                <path id="m-calves-b-r" class="heat-target" d="M114,234 C119,245 118,256 114,263 C108,261 107,249 110,234 Z" fill="#1e1b4b"/>
+                                <text x="90" y="275" fill="#a855f7" font-family="Orbitron" font-size="10" text-anchor="middle" letter-spacing="1" opacity="0.8">POSTERIOR</text>
+                            </g>
+                        </svg>
+                    </div>
+                </div>
+
+                <div class="bg-slate-900/50 p-4 rounded-xl border border-slate-800 h-44 flex flex-col">
+                    <h2 class="text-xs font-bold heading-font text-purple-400 mb-2 uppercase tracking-wider border-b border-slate-800 pb-1">Activity Log</h2>
+                    <div id="quest-log" class="overflow-y-auto flex-1 space-y-1.5 text-xs text-gray-400 font-mono"></div>
+                </div>
+            </div>
+        </div>
+        <!-- Provisions Journal -->
+        <div class="w-full mt-6 bg-slate-900/50 p-4 rounded-xl border border-slate-800">
+            <h2 class="text-sm font-bold heading-font text-purple-400 mb-3 uppercase tracking-wider border-b border-slate-800 pb-1">Provisions Journal</h2>
+            <div class="flex gap-2 mb-4">
+                <input type="text" id="food-input" placeholder="What did you eat today?..."
+                       class="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm placeholder-slate-600"
+                       onkeydown="if(event.key==='Enter') addFoodEntry()">
+                <button onclick="addFoodEntry()"
+                        class="bg-gradient-to-r from-purple-600 to-cyan-600 text-white font-bold px-5 py-2 rounded-lg text-xs uppercase heading-font tracking-wider transition min-h-[44px] shrink-0">
+                    Log
+                </button>
+            </div>
+            <div id="food-log" class="space-y-3 max-h-80 overflow-y-auto"></div>
+        </div>
+    </div>
+
+    <!-- About / Guide Modal -->
+    <div id="about-modal" class="hidden fixed inset-0 bg-black/90 z-50 flex items-start justify-center p-4 overflow-y-auto">
+        <div class="bg-slate-900 border border-purple-500/30 rounded-xl w-full max-w-lg shadow-2xl my-4">
+            <!-- Header -->
+            <div class="flex items-center justify-between px-5 py-4 border-b border-slate-800">
+                <div>
+                    <h2 class="text-base font-bold heading-font text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-cyan-400 tracking-wider">FITRPG</h2>
+                    <p class="text-[9px] text-red-400 font-mono uppercase tracking-widest font-bold">Citadel Engine v5.3 — Field Manual</p>
+                </div>
+                <button onclick="closeAboutModal()" class="text-slate-500 hover:text-white text-xl font-bold leading-none px-2 py-1 rounded transition">✕</button>
+            </div>
+
+            <div class="px-5 py-4 space-y-5 text-[11px] font-mono text-gray-300">
+
+                <!-- Overview -->
+                <section>
+                    <div class="text-[10px] text-cyan-400 font-bold uppercase tracking-widest mb-2 border-b border-slate-800 pb-1">What is FitRPG?</div>
+                    <p class="text-gray-400 leading-relaxed">FitRPG turns your real-world workouts into an RPG character progression system. Log exercises to earn EXP, level up your Hero, and build five core attributes. Your character's health decays over time — stay active to keep it alive.</p>
+                </section>
+
+                <!-- Logging -->
+                <section>
+                    <div class="text-[10px] text-cyan-400 font-bold uppercase tracking-widest mb-2 border-b border-slate-800 pb-1">Logging a Workout</div>
+                    <div class="space-y-1.5 text-gray-400 leading-relaxed">
+                        <div><span class="text-white font-bold">Exercise Name</span> — type anything (e.g. "Pull-ups", "Morning Run").</div>
+                        <div><span class="text-white font-bold">Stat Type</span> — choose which attribute this workout trains:</div>
+                        <div class="pl-3 space-y-0.5">
+                            <div><span class="text-red-400 font-bold">STR</span> — strength training, lifting heavy</div>
+                            <div><span class="text-green-400 font-bold">STA</span> — cardio, endurance, conditioning</div>
+                            <div><span class="text-amber-400 font-bold">AGI</span> — sports, speed, coordination</div>
+                            <div><span class="text-cyan-400 font-bold">WIS</span> — yoga, stretching, mobility</div>
+                            <div><span class="text-fuchsia-400 font-bold">INT</span> — meditation, recovery, self-care</div>
+                        </div>
+                        <div><span class="text-white font-bold">Format</span> — Weight-Based (sets × reps × lbs) or Time-Based (minutes).</div>
+                        <div><span class="text-white font-bold">Target Muscles</span> — optional. Select muscle groups to light up the Anatomical Matrix heat map.</div>
+                        <div class="text-slate-500 pt-1">⚠ Logging the same exercise twice in one day gives a -50% EXP penalty on the second entry.</div>
+                    </div>
+                </section>
+
+                <!-- EXP & Leveling -->
+                <section>
+                    <div class="text-[10px] text-cyan-400 font-bold uppercase tracking-widest mb-2 border-b border-slate-800 pb-1">EXP &amp; Hero Level</div>
+                    <div class="space-y-1.5 text-gray-400 leading-relaxed">
+                        <div>Every workout earns EXP. <span class="text-white">Weight-based</span> EXP scales with heavier weight and more volume. <span class="text-white">Time-based</span> EXP scales with session length (30 min = 1× base).</div>
+                        <div>Each level requires <span class="text-white">1.5× more EXP</span> than the last (250 → 375 → 562 → ...).</div>
+                        <div>Your <span class="text-white">Hero Level is capped</span> by your lowest individual attribute level. You must train all five stats to keep leveling up.</div>
+                        <div>Attribute levels up every <span class="text-white">5 stat points</span> above base (Lv.2 at 15, Lv.3 at 20, etc.).</div>
+                    </div>
+                </section>
+
+                <!-- HP Bar -->
+                <section>
+                    <div class="text-[10px] text-red-400 font-bold uppercase tracking-widest mb-2 border-b border-slate-800 pb-1">❤ Health Bar</div>
+                    <div class="space-y-1.5 text-gray-400 leading-relaxed">
+                        <div>HP starts at <span class="text-white">100%</span> and decays at <span class="text-white">1% per hour</span> in real time — even when the app is closed.</div>
+                        <div>Logging a <span class="text-red-400 font-bold">STR</span>, <span class="text-green-400 font-bold">STA</span>, or <span class="text-amber-400 font-bold">AGI</span> workout restores <span class="text-white">+10% HP</span> (max once per calendar day).</div>
+                        <div>If HP reaches <span class="text-white">0%</span>, your displayed Hero Level resets to <span class="text-white">Lv. 1</span> until you restore HP above 0%.</div>
+                    </div>
+                </section>
+
+                <!-- Mana Bar -->
+                <section>
+                    <div class="text-[10px] text-blue-400 font-bold uppercase tracking-widest mb-2 border-b border-slate-800 pb-1">◈ Mana Bar</div>
+                    <div class="space-y-1.5 text-gray-400 leading-relaxed">
+                        <div>Three blue mana segments sit below the HP bar. <span class="text-white">Tap the mana bar</span> to spend one segment and activate a <span class="text-white">24-hour HP decay shield</span>.</div>
+                        <div>Activating while a shield is already active <span class="text-white">stacks the duration</span> (up to 72h with all 3 segments).</div>
+                        <div>Logging a <span class="text-cyan-400 font-bold">WIS</span> or <span class="text-fuchsia-400 font-bold">INT</span> workout restores <span class="text-white">+1 mana segment</span> (max once per 24 hours).</div>
+                    </div>
+                </section>
+
+                <!-- Heat Map -->
+                <section>
+                    <div class="text-[10px] text-cyan-400 font-bold uppercase tracking-widest mb-2 border-b border-slate-800 pb-1">Anatomical Matrix</div>
+                    <div class="space-y-1.5 text-gray-400 leading-relaxed">
+                        <div>The body diagram on the right tracks which muscles you've trained. Regions glow brighter with more training — from dark purple (untrained) through blue to cyan (peak heat).</div>
+                        <div>Select muscle groups in the form when logging to update the heat map. Both anterior (front) and posterior (back) views are shown.</div>
+                    </div>
+                </section>
+
+                <!-- Tier Borders -->
+                <section>
+                    <div class="text-[10px] text-cyan-400 font-bold uppercase tracking-widest mb-2 border-b border-slate-800 pb-1">Hero Tier Borders</div>
+                    <div class="space-y-1 text-gray-400 leading-relaxed">
+                        <div>Your avatar frame upgrades as your Hero Level rises:</div>
+                        <div class="pl-2 space-y-0.5">
+                            <div><span style="color:#64748b" class="font-bold">Lv 1–2</span> — Iron Recruit</div>
+                            <div><span style="color:#b45309" class="font-bold">Lv 3–5</span> — Bronze Adventurer</div>
+                            <div><span style="color:#94a3b8" class="font-bold">Lv 6–9</span> — Silver Knight</div>
+                            <div><span style="color:#eab308" class="font-bold">Lv 10–14</span> — Gold Champion</div>
+                            <div><span style="color:#10b981" class="font-bold">Lv 15–19</span> — Emerald Guardian</div>
+                            <div><span style="color:#a855f7" class="font-bold">Lv 20–24</span> — Amethyst Archmage</div>
+                            <div><span style="color:#c084fc" class="font-bold">Lv 25+</span> — Mythic Ascendant (animated prismatic)</div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Calendar -->
+                <section>
+                    <div class="text-[10px] text-cyan-400 font-bold uppercase tracking-widest mb-2 border-b border-slate-800 pb-1">Quest Calendar</div>
+                    <p class="text-gray-400 leading-relaxed">Days where you logged at least one workout appear highlighted in cyan. Use it to track your streak and spot rest days.</p>
+                </section>
+
+                <!-- Export/Import -->
+                <section>
+                    <div class="text-[10px] text-cyan-400 font-bold uppercase tracking-widest mb-2 border-b border-slate-800 pb-1">Saving &amp; Syncing</div>
+                    <div class="space-y-1.5 text-gray-400 leading-relaxed">
+                        <div>All data is saved automatically to your browser's <span class="text-white">local storage</span>. It persists through page refreshes and closing the browser.</div>
+                        <div>To move your save to another device: <span class="text-white">Export Save</span> downloads a <span class="text-white">fitrpg-save.json</span> file. On the other device, use <span class="text-white">Import Save</span> and paste the file contents to restore.</div>
+                        <div class="text-slate-500">⚠ Clearing browser site data or using private/incognito mode will wipe local storage.</div>
+                    </div>
+                </section>
+
+            </div>
+
+            <div class="px-5 py-3 border-t border-slate-800 text-center">
+                <button onclick="closeAboutModal()" class="bg-gradient-to-r from-purple-600 to-cyan-600 text-white font-bold py-2.5 px-8 rounded-lg text-xs uppercase heading-font tracking-wider transition min-h-[44px]">Close Manual</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Import Save Modal -->
+    <div id="import-modal" class="hidden fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-purple-500/30 rounded-xl p-5 w-full max-w-sm shadow-2xl">
+            <h3 class="text-sm font-bold heading-font text-purple-400 uppercase tracking-wider mb-1">Import Save Data</h3>
+            <p class="text-[10px] text-gray-400 font-mono mb-3">Paste your exported FitRPG JSON below. This will overwrite your current profile.</p>
+            <textarea id="import-textarea" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-xs text-white font-mono h-32 resize-none placeholder-slate-600" placeholder='{"history": [...], "health": 100, ...}'></textarea>
+            <div class="flex gap-2 mt-3">
+                <button onclick="confirmImport()" class="flex-1 bg-gradient-to-r from-purple-600 to-cyan-600 text-white font-bold py-2.5 rounded-lg text-xs uppercase heading-font tracking-wider transition min-h-[44px]">Load Save</button>
+                <button onclick="closeImportModal()" class="flex-1 border border-slate-700 text-slate-400 hover:text-white font-bold py-2.5 rounded-lg text-xs uppercase font-mono tracking-wider transition min-h-[44px]">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const exercises = [
+            // STRENGTH
+            { id: 'bench_press',    name: 'Bench Press',                    category: 'Strength (Lifting)',      type: 'str', format: 'weight', exp: 15, target: ['chest-l','chest-r','shoulders-f','shoulders-f-r','triceps-l','triceps-r'] },
+            { id: 'deadlift',       name: 'Deadlift',                       category: 'Strength (Lifting)',      type: 'str', format: 'weight', exp: 20, target: ['lower-back','traps','traps-r','traps-b','glutes','glutes-r','hamstrings-l','hamstrings-r','forearm-l','forearm-r','forearm-b-l','forearm-b-r'] },
+            { id: 'squat',          name: 'Barbell Squat',                  category: 'Strength (Lifting)',      type: 'str', format: 'weight', exp: 18, target: ['quads-l','quads-r','glutes','glutes-r','abs','hamstrings-l','hamstrings-r','calves-l','calves-r','calves-b-l','calves-b-r'] },
+            { id: 'overhead_press', name: 'Overhead Press',                 category: 'Strength (Lifting)',      type: 'str', format: 'weight', exp: 15, target: ['shoulders-f','shoulders-f-r','traps','traps-r','triceps-l','triceps-r'] },
+            { id: 'barbell_row',    name: 'Barbell Row',                    category: 'Strength (Lifting)',      type: 'str', format: 'weight', exp: 15, target: ['lats-l','lats-r','traps-b','lower-back','rhomboids','biceps-l','biceps-r','forearm-l','forearm-r','forearm-b-l','forearm-b-r'] },
+
+            // STAMINA
+            { id: 'running',  name: 'Outdoor Running',           category: 'Stamina (Cardio)', type: 'sta', format: 'time', exp: 15, target: ['quads-l','quads-r','glutes','glutes-r','hamstrings-l','hamstrings-r','calves-l','calves-r','calves-b-l','calves-b-r'] },
+            { id: 'cycling',  name: 'Stationary/Road Cycling',   category: 'Stamina (Cardio)', type: 'sta', format: 'time', exp: 12, target: ['quads-l','quads-r','hamstrings-l','hamstrings-r','calves-l','calves-r','calves-b-l','calves-b-r'] },
+            { id: 'rowing',   name: 'Rowing Machine',             category: 'Stamina (Cardio)', type: 'sta', format: 'time', exp: 15, target: ['lats-l','lats-r','traps-b','lower-back','rhomboids','biceps-l','biceps-r','forearm-l','forearm-r','forearm-b-l','forearm-b-r'] },
+            { id: 'swimming', name: 'Lap Swimming',               category: 'Stamina (Cardio)', type: 'sta', format: 'time', exp: 18, target: ['lats-l','lats-r','shoulders-f','shoulders-f-r','chest-l','chest-r','triceps-l','triceps-r'] },
+
+            // AGILITY
+            { id: 'basketball', name: 'Basketball Game',         category: 'Agility (Sports)', type: 'agi', format: 'time', exp: 15, target: ['quads-l','quads-r','abs','glutes','glutes-r','calves-l','calves-r','calves-b-l','calves-b-r'] },
+            { id: 'soccer',     name: 'Soccer Match',            category: 'Agility (Sports)', type: 'agi', format: 'time', exp: 18, target: ['quads-l','quads-r','glutes','glutes-r','hamstrings-l','hamstrings-r','calves-l','calves-r','calves-b-l','calves-b-r'] },
+            { id: 'tennis',     name: 'Tennis / Pickleball',     category: 'Agility (Sports)', type: 'agi', format: 'time', exp: 15, target: ['shoulders-f','shoulders-f-r','quads-l','quads-r','abs','obliques-l','obliques-r','forearm-l','forearm-r'] },
+            { id: 'boxing',     name: 'Sparring / Heavy Bag',    category: 'Agility (Sports)', type: 'agi', format: 'time', exp: 18, target: ['shoulders-f','shoulders-f-r','abs','chest-l','chest-r','obliques-l','obliques-r','triceps-l','triceps-r','forearm-l','forearm-r'] },
+
+            // WISDOM
+            { id: 'yoga',              name: 'Vinyasa / Hatha Yoga',                  category: 'Wisdom (Stretching)', type: 'wis', format: 'time', exp: 12, target: ['lower-back','abs','glutes','glutes-r','obliques-l','obliques-r','hamstrings-l','hamstrings-r'] },
+            { id: 'full_body_stretch', name: 'Full Body Mobility Static Stretch',     category: 'Wisdom (Stretching)', type: 'wis', format: 'time', exp: 10, target: ['quads-l','quads-r','lats-l','lats-r','lower-back','hamstrings-l','hamstrings-r','calves-l','calves-r','calves-b-l','calves-b-r'] },
+            { id: 'foam_rolling',      name: 'Foam Rolling & SMR',                    category: 'Wisdom (Stretching)', type: 'wis', format: 'time', exp: 10, target: ['quads-l','quads-r','glutes','glutes-r','lats-l','lats-r','hamstrings-l','hamstrings-r','calves-b-l','calves-b-r'] },
+
+            // INTELLIGENCE
+            { id: 'meditation',       name: 'Mindfulness Meditation',                 category: 'Intelligence (Self-Care)', type: 'int', format: 'time', exp: 12, target: [] },
+            { id: 'sauna_cold_plunge',name: 'Sauna / Cold Therapy Contrast',          category: 'Intelligence (Self-Care)', type: 'int', format: 'time', exp: 15, target: [] },
+            { id: 'journaling',       name: 'Mental Decompression & Journaling',      category: 'Intelligence (Self-Care)', type: 'int', format: 'time', exp: 10, target: [] }
+        ];
+
+        // 16x16 High-Fidelity Fantasy Archetype Character Sprite Matrices 
+        const pixelAvatars = [
+            {
+                name: "Warrior",
+                pixels: [
+                    // Full knight helm with crimson plume & dark visor slit
+                    {x:5, y:1, w:2, h:1, c:"#991b1b"}, {x:6, y:2, w:3, h:1, c:"#ef4444"}, // Plume/Crest
+                    {x:5, y:3, w:6, h:4, c:"#64748b"}, {x:4, y:4, w:8, h:2, c:"#475569"}, // Helm structure
+                    {x:5, y:5, w:6, h:1, c:"#0f172a"}, // Visor dark line
+                    // Body Armor & Shield
+                    {x:5, y:7, w:6, h:5, c:"#475569"}, {x:6, y:8, w:4, h:4, c:"#cbd5e1"}, // Plate breastplate
+                    {x:2, y:6, w:2, h:5, c:"#94a3b8"}, {x:3, y:7, w:1, h:3, c:"#334155"}, // Steel kite shield
+                    // Glowing runic blade
+                    {x:12, y:4, w:1, h:7, c:"#38bdf8"}, {x:11, y:5, w:3, h:1, c:"#0ea5e9"}, {x:12, y:11, w:1, h:2, c:"#1e293b"}
+                ]
+            },
+            {
+                name: "Cleric",
+                pixels: [
+                    // High-tier Miter crown with golden cross accent
+                    {x:5, y:1, w:6, h:5, c:"#f8fafc"}, {x:7, y:2, w:2, h:3, c:"#fbbf24"}, {x:6, y:3, w:4, h:1, c:"#fbbf24"}, // Crown & Cross
+                    {x:5, y:5, w:6, h:2, c:"#ffedd5"}, {x:6, y:5, w:1, h:1, c:"#1e293b"}, {x:9, y:5, w:1, h:1, c:"#1e293b"}, // Face & Eyes
+                    // Vestments & Divine Flanged Mace
+                    {x:4, y:7, w:8, h:6, c:"#0284c7"}, {x:6, y:7, w:4, h:6, c:"#e2e8f0"}, // Cyan & white robes
+                    {x:11, y:7, w:3, h:1, c:"#fbbf24"}, {x:12, y:4, w:1, h:8, c:"#d97706"}, // Mace shaft
+                    {x:11, y:3, w:3, h:2, c:"#fbbf24"}, {x:12, y:2, w:1, h:4, c:"#fef08a"}  // Glowing Mace head
+                ]
+            },
+            {
+                name: "Monk",
+                pixels: [
+                    // Bald character profile with striking crimson focus headband
+                    {x:5, y:3, w:6, h:4, c:"#fed7aa"}, {x:5, y:5, w:1, h:1, c:"#0f172a"}, {x:8, y:5, w:1, h:1, c:"#0f172a"}, // Face
+                    {x:4, y:2, w:8, h:1, c:"#dc2626"}, {x:11, y:2, w:1, h:3, c:"#b91c1c"}, // Headband wrapping & tails
+                    // Shaolin-style asymmetrical tunic
+                    {x:5, y:7, w:6, h:6, c:"#f97316"}, {x:5, y:7, w:3, h:5, c:"#b45309"}, // Orange/brown half-robe
+                    // Fighting wraps & kinetic strike aura effects
+                    {x:2, y:8, w:2, h:2, c:"#e2e8f0"}, {x:1, y:7, w:2, h:3, c:"#22d3ee"}, // Left hand jab + energy
+                    {x:12, y:8, w:2, h:2, c:"#e2e8f0"}, {x:13, y:7, w:2, h:3, c:"#22d3ee"} // Right hand guard + energy
+                ]
+            },
+            {
+                name: "Wizard",
+                pixels: [
+                    // Deep shadow dark cowl with bright magical glowing eyes
+                    {x:4, y:2, w:8, h:5, c:"#312e81"}, {x:5, y:3, w:6, h:4, c:"#1e1b4b"}, // Hood exterior & shadow interior
+                    {x:5, y:4, w:1, h:1, c:"#a855f7"}, {x:8, y:4, w:1, h:1, c:"#a855f7"}, // Purple luminous gaze
+                    // Enchanted long-robes
+                    {x:4, y:7, w:8, h:6, c:"#312e81"}, {x:5, y:8, w:6, h:5, c:"#4338ca"}, {x:6, y:7, w:4, h:1, c:"#f43f5e"}, // Robes + collar
+                    // Great Arch-Staff capped with a levitating mana-crystal
+                    {x:12, y:5, w:1, h:8, c:"#78350f"}, // Wooden staff shaft
+                    {x:11, y:3, w:3, h:2, c:"#c084fc"}, {x:12, y:2, w:1, h:1, c:"#f3e8ff"}  // Levitating violet crystal
+                ]
+            },
+            {
+                name: "Barbarian",
+                pixels: [
+                    // Spiked Iron executioner helm over wild red hair
+                    {x:4, y:3, w:8, h:4, c:"#475569"}, {x:3, y:4, w:1, h:2, c:"#94a3b8"}, {x:12, y:4, w:1, h:2, c:"#94a3b8"}, // Horns/Spikes
+                    {x:5, y:2, w:6, h:1, c:"#ea580c"}, // Wild hair peaking out
+                    {x:5, y:5, w:6, h:2, c:"#ffedd5"}, {x:5, y:5, w:1, h:1, c:"#1e293b"}, {x:8, y:5, w:1, h:1, c:"#1e293b"}, // Eyes
+                    // Leather harness & massive bearded iron axe
+                    {x:4, y:7, w:8, h:6, c:"#78350f"}, {x:5, y:7, w:6, h:2, c:"#ea580c"}, // Fur shoulder trim & harness
+                    {x:1, y:5, w:3, h:3, c:"#64748b"}, {x:2, y:4, w:1, h:8, c:"#451a03"}, // Battleaxe blade and iron bindings
+                    {x:0, y:6, w:2, h:1, c:"#94a3b8"} // Extended heavy cutting edge
+                ]
+            },
+            {
+                name: "Rogue",
+                pixels: [
+                    // Stealth shinobi cowl covering the nose and mouth
+                    {x:4, y:2, w:8, h:5, c:"#1e293b"}, {x:5, y:3, w:6, h:2, c:"#0f172a"}, // Shadow wrap
+                    {x:5, y:4, w:6, h:1, c:"#fed7aa"}, {x:6, y:4, w:1, h:1, c:"#c084fc"}, {x:9, y:4, w:1, h:1, c:"#c084fc"}, // Skin slice + keen eyes
+                    // Nightrunner garb & dual serrated poison daggers
+                    {x:4, y:7, w:8, h:6, c:"#1e293b"}, {x:5, y:8, w:6, h:4, c:"#581c87"}, // Dark tunic + purple sash
+                    {x:2, y:8, w:1, h:4, c:"#4ade80"}, {x:2, y:7, w:1, h:1, c:"#334155"},  // Left toxic dagger
+                    {x:13, y:8, w:1, h:4, c:"#4ade80"}, {x:13, y:7, w:1, h:1, c:"#334155"} // Right toxic dagger
+                ]
+            }
+        ];
+
+        let userData = { avatarIndex: 0, history: [], health: 100, lastHealthTick: new Date().toISOString(), healthRegenDates: {}, mana: 3, manaShieldExpiry: null, lastManaRegen: null, foodLog: [] };
+        const heatColors = ['#1e1b4b', '#312e81', '#2563eb', '#4f46e5', '#7c3aed', '#06b6d4'];
+
+        let selectedStat = 'str';
+        let selectedFormat = 'weight';
+        let selectedMuscles = new Set();
+
+        const muscleGroupMap = {
+            chest:     ['chest-l','chest-r'],
+            back:      ['lats-l','lats-r','traps-b','lower-back','rhomboids'],
+            biceps:    ['biceps-l','biceps-r','forearm-l','forearm-r'],
+            triceps:   ['triceps-l','triceps-r','forearm-b-l','forearm-b-r'],
+            traps:     ['traps','traps-r','traps-b'],
+            shoulders: ['shoulders-f','shoulders-f-r','shoulders-b','shoulders-b-r'],
+            core:      ['abs','obliques-l','obliques-r'],
+            quads:     ['quads-l','quads-r'],
+            hams:      ['hamstrings-l','hamstrings-r'],
+            calves:    ['calves-l','calves-r','calves-b-l','calves-b-r'],
+            glutes:    ['glutes','glutes-r'],
+            groin:     []
+        };
+
+        function toggleMuscle(group) {
+            const btn = document.getElementById(`mus-${group}`);
+            if (selectedMuscles.has(group)) {
+                selectedMuscles.delete(group);
+                btn.style.borderColor = '';
+                btn.style.backgroundColor = '';
+                btn.style.color = '';
+                btn.className = btn.className.replace('text-purple-300', 'text-slate-400');
+            } else {
+                selectedMuscles.add(group);
+                btn.style.borderColor = 'rgba(168,85,247,0.6)';
+                btn.style.backgroundColor = 'rgba(88,28,135,0.4)';
+                btn.className = btn.className.replace('text-slate-400', 'text-purple-300');
+            }
+        }
+
+        function clearMuscleSelection() {
+            selectedMuscles.clear();
+            document.querySelectorAll('.muscle-tag').forEach(btn => {
+                btn.style.borderColor = '';
+                btn.style.backgroundColor = '';
+                btn.className = btn.className.replace('text-purple-300', 'text-slate-400');
+            });
+        }
+
+        const statMeta = {
+            str: { active: 'border-red-500 bg-red-900/40',     inactive: 'border-slate-700 bg-slate-800' },
+            sta: { active: 'border-green-500 bg-green-900/40', inactive: 'border-slate-700 bg-slate-800' },
+            agi: { active: 'border-amber-500 bg-amber-900/40', inactive: 'border-slate-700 bg-slate-800' },
+            wis: { active: 'border-cyan-500 bg-cyan-900/40',   inactive: 'border-slate-700 bg-slate-800' },
+            int: { active: 'border-fuchsia-500 bg-fuchsia-900/40', inactive: 'border-slate-700 bg-slate-800' }
+        };
+
+        function selectStat(stat) {
+            selectedStat = stat;
+            ['str', 'sta', 'agi', 'wis', 'int'].forEach(s => {
+                const btn = document.getElementById(`stat-btn-${s}`);
+                const meta = statMeta[s];
+                btn.className = btn.className
+                    .replace(meta.active, '').replace(meta.inactive, '').trim();
+                btn.className += ' ' + (s === stat ? meta.active : meta.inactive);
+            });
+        }
+
+        function selectFormat(fmt) {
+            selectedFormat = fmt;
+            const wBtn = document.getElementById('fmt-btn-weight');
+            const tBtn = document.getElementById('fmt-btn-time');
+            if (fmt === 'weight') {
+                wBtn.className = wBtn.className.replace('border-slate-700 bg-slate-800 text-slate-400', '').trim() + ' border-purple-500 bg-purple-900/40 text-purple-300';
+                tBtn.className = tBtn.className.replace('border-purple-500 bg-purple-900/40 text-purple-300', '').trim() + ' border-slate-700 bg-slate-800 text-slate-400';
+                document.getElementById('metrics-weight').classList.remove('hidden');
+                document.getElementById('metrics-time').classList.add('hidden');
+            } else {
+                tBtn.className = tBtn.className.replace('border-slate-700 bg-slate-800 text-slate-400', '').trim() + ' border-purple-500 bg-purple-900/40 text-purple-300';
+                wBtn.className = wBtn.className.replace('border-purple-500 bg-purple-900/40 text-purple-300', '').trim() + ' border-slate-700 bg-slate-800 text-slate-400';
+                document.getElementById('metrics-time').classList.remove('hidden');
+                document.getElementById('metrics-weight').classList.add('hidden');
+            }
+        }
+
+        function escapeHtml(str) {
+            return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        }
+
+        function addFoodEntry() {
+            const input = document.getElementById('food-input');
+            const text = input.value.trim();
+            if (!text) return;
+            const now = new Date();
+            userData.foodLog.push({
+                id: 'food_' + Date.now(),
+                text,
+                date: now.toISOString().slice(0, 10),
+                time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            });
+            saveToStorage();
+            input.value = '';
+            renderFoodLog();
+        }
+
+        function removeFoodEntry(id) {
+            userData.foodLog = userData.foodLog.filter(e => e.id !== id);
+            saveToStorage();
+            renderFoodLog();
+        }
+
+        function renderFoodLog() {
+            const container = document.getElementById('food-log');
+            if (!container) return;
+            if (!userData.foodLog || userData.foodLog.length === 0) {
+                container.innerHTML = '<div class="text-center text-gray-600 italic text-xs font-mono py-3">No entries yet. Start logging your meals above.</div>';
+                return;
+            }
+            // Group entries by date
+            const grouped = {};
+            userData.foodLog.forEach(e => {
+                if (!grouped[e.date]) grouped[e.date] = [];
+                grouped[e.date].push(e);
+            });
+            const sortedDates = Object.keys(grouped).sort((a, b) => b.localeCompare(a));
+            container.innerHTML = '';
+            sortedDates.forEach(date => {
+                const section = document.createElement('div');
+                const d = new Date(date + 'T12:00:00');
+                const label = d.toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' });
+                const heading = document.createElement('div');
+                heading.className = 'text-[10px] text-purple-400 font-bold uppercase tracking-widest font-mono mb-1.5';
+                heading.innerText = label;
+                section.appendChild(heading);
+                const list = document.createElement('div');
+                list.className = 'space-y-1';
+                grouped[date].forEach(entry => {
+                    const item = document.createElement('div');
+                    item.className = 'flex justify-between items-start bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 gap-3';
+                    item.innerHTML = `<div class="flex-1 min-w-0 text-xs"><span class="text-slate-500 font-mono text-[10px] mr-2">${escapeHtml(entry.time)}</span><span class="text-gray-200">${escapeHtml(entry.text)}</span></div><button onclick="removeFoodEntry('${entry.id}')" class="text-red-500 hover:text-red-400 font-bold shrink-0 text-xs leading-none mt-0.5">✕</button>`;
+                    list.appendChild(item);
+                });
+                section.appendChild(list);
+                container.appendChild(section);
+            });
+        }
+
+        function showAboutModal() {
+            document.getElementById('settings-dropdown').classList.add('hidden');
+            document.getElementById('about-modal').classList.remove('hidden');
+        }
+
+        function closeAboutModal() {
+            document.getElementById('about-modal').classList.add('hidden');
+        }
+
+        function exportData() {
+            document.getElementById('settings-dropdown').classList.add('hidden');
+            const json = localStorage.getItem('fitrpg_modern_solo') || JSON.stringify(userData);
+            const blob = new Blob([json], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'fitrpg-save.json';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function showImportModal() {
+            document.getElementById('settings-dropdown').classList.add('hidden');
+            document.getElementById('import-modal').classList.remove('hidden');
+        }
+
+        function closeImportModal() {
+            document.getElementById('import-modal').classList.add('hidden');
+            document.getElementById('import-textarea').value = '';
+        }
+
+        function confirmImport() {
+            const text = document.getElementById('import-textarea').value.trim();
+            try {
+                const parsed = JSON.parse(text);
+                if (!parsed.history || !Array.isArray(parsed.history)) throw new Error('Missing history array');
+                userData = parsed;
+                if (userData.avatarIndex === undefined) userData.avatarIndex = 0;
+                if (userData.health === undefined) userData.health = 100;
+                if (userData.lastHealthTick === undefined) userData.lastHealthTick = new Date().toISOString();
+                if (userData.healthRegenDates === undefined) userData.healthRegenDates = {};
+                if (userData.mana === undefined) userData.mana = 3;
+                if (userData.manaShieldExpiry === undefined) userData.manaShieldExpiry = null;
+                if (userData.lastManaRegen === undefined) userData.lastManaRegen = null;
+                saveToStorage();
+                closeImportModal();
+                rebuildEngine();
+            } catch (e) {
+                alert('Invalid save file. Make sure you paste the full contents of your fitrpg-save.json export.');
+            }
+        }
+
+        window.onload = function() {
+            document.getElementById('input-date').value = "2026-06-25";
+            loadFromStorage();
+            applyHealthDecay();
+            initApp();
+
+            // Decay health in real-time while the page is open (once per minute)
+            setInterval(() => {
+                applyHealthDecay();
+                rebuildEngine();
+            }, 60000);
+
+            // Document listener to auto-close drop menus when clicking anywhere else
+            document.addEventListener('click', function(e) {
+                const menu = document.getElementById('settings-dropdown');
+                const btn = document.getElementById('settings-menu-btn');
+                if (menu && !menu.classList.contains('hidden') && !btn.contains(e.target) && !menu.contains(e.target)) {
+                    menu.classList.add('hidden');
+                }
+            });
+        };
+
+        function loadFromStorage() {
+            const saved = localStorage.getItem('fitrpg_modern_solo');
+            if (saved) {
+                userData = JSON.parse(saved);
+                if (userData.avatarIndex === undefined) userData.avatarIndex = 0;
+                if (userData.health === undefined) userData.health = 100;
+                if (userData.lastHealthTick === undefined) userData.lastHealthTick = new Date().toISOString();
+                if (userData.healthRegenDates === undefined) userData.healthRegenDates = {};
+                if (userData.mana === undefined) userData.mana = 3;
+                if (userData.manaShieldExpiry === undefined) userData.manaShieldExpiry = null;
+                if (userData.lastManaRegen === undefined) userData.lastManaRegen = null;
+                if (userData.foodLog === undefined) userData.foodLog = [];
+            }
+        }
+
+        function applyHealthDecay() {
+            const now = new Date();
+            const last = new Date(userData.lastHealthTick);
+            const shieldActive = userData.manaShieldExpiry && new Date(userData.manaShieldExpiry) > now;
+            if (!shieldActive) {
+                const hoursElapsed = (now - last) / (1000 * 60 * 60);
+                userData.health = Math.max(0, userData.health - hoursElapsed);
+            }
+            // Always advance tick so shielded time doesn't accumulate as future decay
+            userData.lastHealthTick = now.toISOString();
+            saveToStorage();
+        }
+
+        function activateManaShield() {
+            if (userData.mana <= 0) return;
+            const now = new Date();
+            const currentExpiry = userData.manaShieldExpiry ? new Date(userData.manaShieldExpiry) : now;
+            const base = currentExpiry > now ? currentExpiry : now;
+            userData.manaShieldExpiry = new Date(base.getTime() + 24 * 60 * 60 * 1000).toISOString();
+            userData.mana -= 1;
+            saveToStorage();
+            rebuildEngine();
+        }
+
+        function saveToStorage() {
+            localStorage.setItem('fitrpg_modern_solo', JSON.stringify(userData));
+        }
+
+        function toggleSettingsMenu(event) {
+            event.stopPropagation();
+            const dropdown = document.getElementById('settings-dropdown');
+            dropdown.classList.toggle('hidden');
+        }
+
+        function resetData() {
+            document.getElementById('settings-dropdown').classList.add('hidden');
+            if(confirm("Are you sure you want to completely wipe your character record?")) {
+                userData = { avatarIndex: 0, history: [], health: 100, lastHealthTick: new Date().toISOString(), healthRegenDates: {}, mana: 3, manaShieldExpiry: null, lastManaRegen: null, foodLog: [] };
+                saveToStorage();
+                rebuildEngine();
+            }
+        }
+
+        function initApp() {
+            rebuildEngine();
+        }
+
+        function cycleAvatar(direction) {
+            userData.avatarIndex = (userData.avatarIndex + direction + pixelAvatars.length) % pixelAvatars.length;
+            saveToStorage();
+            rebuildEngine();
+        }
+
+        function renderPixelAvatar(index) {
+            const active = pixelAvatars[index];
+            document.getElementById('avatar-class-name').innerText = active.name;
+            
+            const svgEl = document.getElementById('avatar-svg');
+            svgEl.innerHTML = ''; 
+
+            active.pixels.forEach(p => {
+                const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+                rect.setAttribute("x", p.x);
+                rect.setAttribute("y", p.y);
+                rect.setAttribute("width", p.w);
+                rect.setAttribute("height", p.h);
+                rect.setAttribute("fill", p.c);
+                svgEl.appendChild(rect);
+            });
+        }
+
+        function submitWorkout() {
+            const name = document.getElementById('input-exercise-name').value.trim();
+            const date = document.getElementById('input-date').value;
+
+            if (!name) return alert("Enter an exercise name.");
+            if (!date) return alert("Select a date.");
+
+            const target = [];
+            selectedMuscles.forEach(g => { if (muscleGroupMap[g]) target.push(...muscleGroupMap[g]); });
+            let entry = { id: 'log_' + Date.now(), name, statType: selectedStat, format: selectedFormat, date, target };
+
+            if (selectedFormat === 'time') {
+                entry.time = parseInt(document.getElementById('input-time').value) || 0;
+            } else {
+                entry.sets = parseInt(document.getElementById('input-sets').value) || 1;
+                entry.reps = parseInt(document.getElementById('input-reps').value) || 1;
+                entry.weight = parseInt(document.getElementById('input-weight').value) || 0;
+            }
+
+            userData.history.push(entry);
+            clearMuscleSelection();
+
+            // Health regen: STR/STA/AGI workouts restore up to 10% HP per calendar day
+            if (['str', 'sta', 'agi'].includes(selectedStat)) {
+                const regenSoFar = userData.healthRegenDates[entry.date] || 0;
+                if (regenSoFar < 10) {
+                    const regen = 10 - regenSoFar;
+                    userData.health = Math.min(100, userData.health + regen);
+                    userData.healthRegenDates[entry.date] = 10;
+                }
+            }
+
+            // Mana regen: WIS/INT workouts restore 1 mana segment, max once per 24 hours
+            if (['wis', 'int'].includes(selectedStat) && userData.mana < 3) {
+                const now = new Date();
+                const lastRegen = userData.lastManaRegen ? new Date(userData.lastManaRegen) : null;
+                const hoursSinceRegen = lastRegen ? (now - lastRegen) / (1000 * 60 * 60) : Infinity;
+                if (hoursSinceRegen >= 24) {
+                    userData.mana = Math.min(3, userData.mana + 1);
+                    userData.lastManaRegen = now.toISOString();
+                }
+            }
+
+            saveToStorage();
+            rebuildEngine();
+        }
+
+        function removeLog(id) {
+            userData.history = userData.history.filter(i => i.id !== id);
+            saveToStorage();
+            rebuildEngine();
+        }
+
+        function rebuildEngine() {
+            let character = { level: 1, exp: 0, nextLevelExp: 250, stats: { str: 10, sta: 10, agi: 10, wis: 10, int: 10 } };
+            let muscleHeat = {};
+            let calendarMap = {};
+            let dailyActivityCount = {};
+
+            const sortedHistory = [...userData.history].sort((a,b) => new Date(a.date) - new Date(b.date));
+
+            sortedHistory.forEach(log => {
+                // Support both legacy preset entries (exerciseId) and new manual entries (name/statType/format)
+                let statType, format, target = [], baseExp = 12;
+                if (log.exerciseId) {
+                    const ex = exercises.find(e => e.id === log.exerciseId);
+                    if (!ex) return;
+                    statType = ex.type;
+                    format = ex.format;
+                    target = ex.target || [];
+                    baseExp = ex.exp;
+                } else {
+                    statType = log.statType || 'str';
+                    format = log.format || 'weight';
+                    target = log.target || [];
+                }
+
+                const dayKey = `${log.date}_${log.name || log.exerciseId}`;
+                dailyActivityCount[dayKey] = (dailyActivityCount[dayKey] || 0) + 1;
+                const spamPenalty = dailyActivityCount[dayKey] > 1 ? 0.5 : 1.0;
+
+                let loadMod = 1;
+                if (format === 'time') {
+                    loadMod = (log.time || 30) / 30;
+                } else {
+                    loadMod = 1 + (log.weight * 0.001) + (log.sets * 0.03) + ((log.reps || 10) * 0.005);
+                }
+
+                character.stats[statType] += 0.08 * loadMod * spamPenalty;
+                character.exp += Math.floor(baseExp * loadMod * spamPenalty);
+
+                target.forEach(m => {
+                    muscleHeat[m] = Math.min((muscleHeat[m] || 0) + 1, 5);
+                });
+                calendarMap[log.date] = true;
+            });
+
+            let attrLevels = {};
+            ['str', 'sta', 'agi', 'wis', 'int'].forEach(s => {
+                attrLevels[s] = Math.floor((character.stats[s] - 10) / 5) + 1;
+            });
+
+            let lowestAttributeLevel = Math.min(...Object.values(attrLevels));
+
+            while (character.exp >= character.nextLevelExp) {
+                if (character.level >= lowestAttributeLevel) {
+                    break;
+                }
+                character.exp -= character.nextLevelExp;
+                character.level += 1;
+                character.nextLevelExp = Math.floor(character.nextLevelExp * 1.5);
+            }
+
+            renderView(character, muscleHeat, calendarMap, attrLevels);
+        }
+
+        function renderView(char, heat, calMap, attrLevels) {
+            // Health: if 0, character is knocked back to level 1
+            const hp = Math.max(0, Math.min(100, userData.health));
+            const displayLevel = hp <= 0 ? 1 : char.level;
+            document.getElementById('char-level').innerText = displayLevel;
+
+            const hpColor = hp > 50 ? 'from-red-800 to-red-500' : hp > 20 ? 'from-orange-800 to-orange-500' : 'from-red-900 to-red-700';
+            document.getElementById('health-bar').className = `bg-gradient-to-r ${hpColor} h-full transition-all duration-500`;
+            document.getElementById('health-bar').style.width = hp.toFixed(1) + '%';
+            document.getElementById('health-text').innerText = hp.toFixed(0) + '%';
+
+            // Mana segments
+            const now = new Date();
+            const shieldActive = userData.manaShieldExpiry && new Date(userData.manaShieldExpiry) > now;
+            for (let i = 0; i < 3; i++) {
+                const seg = document.getElementById(`mana-seg-${i}`);
+                const filled = i < userData.mana;
+                seg.style.backgroundColor = filled ? (shieldActive ? '#60a5fa' : '#3b82f6') : '#1e293b';
+                seg.style.boxShadow = filled ? (shieldActive ? '0 0 8px rgba(96,165,250,1)' : '0 0 6px rgba(59,130,246,0.8)') : 'none';
+            }
+            const shieldEl = document.getElementById('mana-shield-text');
+            if (shieldActive) {
+                const msLeft = new Date(userData.manaShieldExpiry) - now;
+                const hLeft = Math.floor(msLeft / (1000 * 60 * 60));
+                const mLeft = Math.floor((msLeft % (1000 * 60 * 60)) / (1000 * 60));
+                shieldEl.innerText = `SHIELD ${hLeft}h ${mLeft}m`;
+                shieldEl.className = 'text-[9px] text-blue-300 font-mono font-bold';
+            } else if (userData.mana > 0) {
+                shieldEl.innerText = 'click to activate';
+                shieldEl.className = 'text-[9px] text-slate-500 font-mono';
+            } else {
+                shieldEl.innerText = 'no mana';
+                shieldEl.className = 'text-[9px] text-slate-600 font-mono';
+            }
+
+            // Dynamic Border Progression Mapping Logic
+            const tiers = [
+                { maxLevel: 2,        cls: 'tier-1', name: 'Iron Recruit',      color: '#64748b' },
+                { maxLevel: 5,        cls: 'tier-2', name: 'Bronze Adventurer', color: '#b45309' },
+                { maxLevel: 9,        cls: 'tier-3', name: 'Silver Knight',     color: '#94a3b8' },
+                { maxLevel: 14,       cls: 'tier-4', name: 'Gold Champion',     color: '#eab308' },
+                { maxLevel: 19,       cls: 'tier-5', name: 'Emerald Guardian',  color: '#10b981' },
+                { maxLevel: 24,       cls: 'tier-6', name: 'Amethyst Archmage', color: '#a855f7' },
+                { maxLevel: Infinity, cls: 'tier-7', name: 'Mythic Ascendant',  color: '#c084fc' },
+            ];
+            const activeTier = tiers.find(t => displayLevel <= t.maxLevel);
+            const borderBox = document.getElementById('avatar-container');
+            borderBox.className = "relative w-28 h-28 bg-gradient-to-b from-purple-900/10 to-cyan-900/10 rounded-xl flex items-center justify-center mb-1 overflow-hidden";
+            borderBox.classList.add(activeTier.cls);
+            const tierLabel = document.getElementById('tier-label');
+            tierLabel.innerText = activeTier.name;
+            tierLabel.style.color = activeTier.color;
+
+            renderPixelAvatar(userData.avatarIndex);
+            
+            ['str', 'sta', 'agi', 'wis', 'int'].forEach(stat => {
+                document.getElementById(`stat-${stat}`).innerText = `Lv. ${attrLevels[stat]} (${char.stats[stat].toFixed(1)})`;
+                let currentTierProgress = ((char.stats[stat] - 10) % 5) / 5 * 100;
+                document.getElementById(`bar-${stat}`).style.width = currentTierProgress + '%';
+            });
+
+            document.getElementById('exp-text').innerText = `${char.exp} / ${char.nextLevelExp}`;
+            document.getElementById('exp-bar').style.width = `${Math.min((char.exp / char.nextLevelExp) * 100, 100)}%`;
+
+            document.querySelectorAll('.heat-target').forEach(el => el.style.fill = heatColors[0]);
+            for (const [m, val] of Object.entries(heat)) {
+                const el = document.getElementById(`m-${m}`);
+                if(el) el.style.fill = heatColors[val];
+            }
+
+            const calGrid = document.getElementById('calendar-days-grid');
+            calGrid.innerHTML = '';
+            
+            let offsetBox = document.createElement('div');
+            calGrid.appendChild(offsetBox);
+
+            for (let day = 1; day <= 30; day++) {
+                let dayStr = `2026-06-${day.toString().padStart(2, '0')}`;
+                let cell = document.createElement('div');
+                cell.className = `p-2 text-xs rounded border text-center transition-all ${calMap[dayStr] ? 'bg-purple-900/60 border-cyan-400 text-cyan-300 font-bold' : 'bg-slate-900/30 border-slate-800 text-gray-500'}`;
+                cell.innerText = day;
+                calGrid.appendChild(cell);
+            }
+
+            renderFoodLog();
+
+            const logBox = document.getElementById('quest-log');
+            logBox.innerHTML = userData.history.length === 0 ? '<div class="text-center text-gray-600 italic mt-4">History log is empty.</div>' : '';
+            
+            const statColors = { str: 'text-red-400', sta: 'text-green-400', agi: 'text-amber-400', wis: 'text-cyan-400', int: 'text-fuchsia-400' };
+            [...userData.history].reverse().forEach(log => {
+                let displayName, format, statType;
+                if (log.exerciseId) {
+                    const ex = exercises.find(e => e.id === log.exerciseId);
+                    if (!ex) return;
+                    displayName = ex.name;
+                    format = ex.format;
+                    statType = ex.type;
+                } else {
+                    displayName = log.name;
+                    format = log.format;
+                    statType = log.statType || 'str';
+                }
+
+                const item = document.createElement('div');
+                item.className = 'bg-slate-900 border border-slate-800 p-2 rounded flex justify-between items-center text-[11px]';
+                const detailText = format === 'time' ? `${log.time} mins` : `${log.sets}x${log.reps} @ ${log.weight} lbs`;
+                const statTag = `<span class="font-mono font-bold uppercase ${statColors[statType] || 'text-gray-400'}">[${statType.toUpperCase()}]</span>`;
+                item.innerHTML = `<div><span class="text-purple-400 font-bold">[Day ${log.date.slice(8)}]</span> ${statTag} <span class="text-white">${displayName}</span> <span class="text-gray-500">(${detailText})</span></div><button onclick="removeLog('${log.id}')" class="text-red-500 hover:text-red-400 font-bold ml-2">✕</button>`;
+                logBox.appendChild(item);
+            });
+        }
+    </script>
+</body>
+</html>
