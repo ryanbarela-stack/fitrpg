@@ -1065,6 +1065,7 @@
             let calendarMap = {};
             let dailyActivityCount = {};
 
+            const todayStr = new Date().toISOString().slice(0, 10);
             const sortedHistory = [...userData.history].sort((a,b) => new Date(a.date) - new Date(b.date));
 
             sortedHistory.forEach(log => {
@@ -1102,9 +1103,11 @@
                 character.stats[statType] += 0.08 * loadMod * spamPenalty;
                 character.exp += Math.floor(baseExp * loadMod * spamPenalty * expMult);
 
-                target.forEach(m => {
-                    muscleHeat[m] = Math.min((muscleHeat[m] || 0) + 1, 5);
-                });
+                if (log.date === todayStr) {
+                    target.forEach(m => {
+                        muscleHeat[m] = Math.min((muscleHeat[m] || 0) + 1, 5);
+                    });
+                }
                 calendarMap[log.date] = true;
             });
 
