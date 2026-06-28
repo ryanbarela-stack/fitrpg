@@ -140,11 +140,7 @@
 
                 <div id="tier-label" class="text-[9px] font-bold uppercase tracking-widest font-mono text-slate-400 mb-2">Iron Recruit</div>
 
-                <div class="flex items-center justify-between w-32 mb-1 bg-slate-950 px-2 py-1 rounded border border-slate-800">
-                    <button onclick="cycleAvatar(-1)" id="avatar-btn-prev" class="text-xs text-cyan-400 font-bold hover:text-cyan-300 px-1">◀</button>
-                    <span id="avatar-class-name" class="text-[10px] uppercase font-mono tracking-wider font-bold text-gray-300 text-center flex-1">Warrior</span>
-                    <button onclick="cycleAvatar(1)" id="avatar-btn-next" class="text-xs text-cyan-400 font-bold hover:text-cyan-300 px-1">▶</button>
-                </div>
+                <select id="avatar-select" onchange="selectAvatar(this.value)" class="w-full mb-1 bg-slate-950 border border-slate-800 rounded px-2 py-1 text-[10px] uppercase font-mono tracking-wider font-bold text-gray-300 text-center appearance-none cursor-pointer"></select>
                 <div id="class-bonus-label" class="text-[9px] text-amber-400 font-mono text-center mb-1 leading-tight"></div>
                 <div id="class-lock-label" class="text-[9px] text-red-400 font-mono text-center mb-2 leading-tight"></div>
 
@@ -927,15 +923,19 @@
             return Math.max(0, msLeft);
         }
 
-        function cycleAvatar(direction) {
+        function selectAvatar(indexStr) {
+            const newIndex = parseInt(indexStr);
+            if (newIndex === userData.avatarIndex) return;
             const msLeft = getClassLockRemaining();
             if (msLeft > 0) {
                 const days = Math.floor(msLeft / (1000 * 60 * 60 * 24));
                 const hours = Math.floor((msLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
                 alert(`Class locked for ${days}d ${hours}h. You can only change class once per week.`);
+                // Revert the select back to current class
+                document.getElementById('avatar-select').value = userData.avatarIndex;
                 return;
             }
-            userData.avatarIndex = (userData.avatarIndex + direction + pixelAvatars.length) % pixelAvatars.length;
+            userData.avatarIndex = newIndex;
             userData.lastClassChange = new Date().toISOString();
             saveToStorage();
             rebuildEngine();
@@ -943,8 +943,6 @@
 
         function renderPixelAvatar(index) {
             const active = pixelAvatars[index];
-            document.getElementById('avatar-class-name').innerText = active.name;
-            
             const svgEl = document.getElementById('avatar-svg');
             svgEl.innerHTML = ''; 
 
@@ -1138,25 +1136,33 @@
 
             renderPixelAvatar(userData.avatarIndex);
 
+            // Populate class dropdown
+            const selectEl = document.getElementById('avatar-select');
+            if (selectEl && selectEl.options.length === 0) {
+                pixelAvatars.forEach((a, i) => {
+                    const opt = document.createElement('option');
+                    opt.value = i;
+                    opt.text = a.name;
+                    selectEl.appendChild(opt);
+                });
+            }
+            if (selectEl) selectEl.value = userData.avatarIndex;
+
             // Class bonus label & lock countdown
             const activeClass = pixelAvatars[userData.avatarIndex]?.name;
             const bonusEl = document.getElementById('class-bonus-label');
             const lockEl = document.getElementById('class-lock-label');
-            if (bonusEl && classBonuses[activeClass]) {
-                bonusEl.innerText = classBonuses[activeClass].label;
-            }
+            if (bonusEl) bonusEl.innerText = classBonuses[activeClass] ? classBonuses[activeClass].label : '';
             if (lockEl) {
                 const msLeft = getClassLockRemaining();
                 if (msLeft > 0) {
                     const days = Math.floor(msLeft / (1000 * 60 * 60 * 24));
                     const hours = Math.floor((msLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
                     lockEl.innerText = `🔒 locked ${days}d ${hours}h`;
-                    document.getElementById('avatar-btn-prev').classList.add('opacity-30');
-                    document.getElementById('avatar-btn-next').classList.add('opacity-30');
+                    if (selectEl) selectEl.disabled = true;
                 } else {
                     lockEl.innerText = userData.lastClassChange ? '✓ class change available' : '';
-                    document.getElementById('avatar-btn-prev').classList.remove('opacity-30');
-                    document.getElementById('avatar-btn-next').classList.remove('opacity-30');
+                    if (selectEl) selectEl.disabled = false;
                 }
             }
             
