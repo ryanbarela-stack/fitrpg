@@ -264,7 +264,7 @@
                             <input type="number" id="input-time" value="30" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-1.5 text-center text-xs text-white">
                         </div>
 
-                        <button onclick="submitWorkout()" class="w-full bg-gradient-to-r from-purple-600 to-cyan-600 text-white font-bold py-3 rounded-lg text-xs uppercase heading-font tracking-wider transition min-h-[44px]">Execute Quest</button>
+                        <button id="submit-btn" onclick="submitWorkout()" class="w-full bg-gradient-to-r from-purple-600 to-cyan-600 text-white font-bold py-3 rounded-lg text-xs uppercase heading-font tracking-wider transition min-h-[44px]">Execute Quest</button>
                     </div>
                 </div>
 
@@ -1158,6 +1158,21 @@
 
             saveToStorage();
             rebuildEngine();
+            flashSubmitSuccess();
+        }
+
+        function flashSubmitSuccess() {
+            const btn = document.getElementById('submit-btn');
+            btn.textContent = '✓ Quest Logged!';
+            btn.classList.remove('from-purple-600', 'to-cyan-600');
+            btn.classList.add('from-green-600', 'to-emerald-500');
+            btn.disabled = true;
+            setTimeout(() => {
+                btn.textContent = 'Execute Quest';
+                btn.classList.remove('from-green-600', 'to-emerald-500');
+                btn.classList.add('from-purple-600', 'to-cyan-600');
+                btn.disabled = false;
+            }, 2000);
         }
 
         function removeLog(id) {
