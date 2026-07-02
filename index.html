@@ -233,10 +233,30 @@
                             </div>
                         </div>
 
-                        <div id="metrics-weight" class="grid grid-cols-3 gap-2">
-                            <div><label class="block text-[10px] text-gray-400 uppercase font-bold mb-0.5">Sets</label><input type="number" id="input-sets" value="3" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-1 text-center text-xs text-white"></div>
-                            <div><label class="block text-[10px] text-gray-400 uppercase font-bold mb-0.5">Reps</label><input type="number" id="input-reps" value="10" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-1 text-center text-xs text-white"></div>
-                            <div><label class="block text-[10px] text-gray-400 uppercase font-bold mb-0.5">Weight (lbs)</label><input type="number" id="input-weight" value="45" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-1 text-center text-xs text-white"></div>
+                        <div id="metrics-weight">
+                            <div class="grid grid-cols-3 gap-2 mb-1">
+                                <div class="text-[10px] text-gray-400 uppercase font-bold text-center">Sets</div>
+                                <div class="text-[10px] text-gray-400 uppercase font-bold text-center">Reps</div>
+                                <div class="text-[10px] text-gray-400 uppercase font-bold text-center">Weight (lbs)</div>
+                            </div>
+                            <div id="set-rows" class="space-y-1.5">
+                                <div class="set-row grid grid-cols-3 gap-2">
+                                    <input type="number" placeholder="3" class="set-input w-full bg-slate-800 border border-slate-700 rounded-lg p-1 text-center text-xs text-white">
+                                    <input type="number" placeholder="10" class="rep-input w-full bg-slate-800 border border-slate-700 rounded-lg p-1 text-center text-xs text-white">
+                                    <input type="number" placeholder="45" class="weight-input w-full bg-slate-800 border border-slate-700 rounded-lg p-1 text-center text-xs text-white">
+                                </div>
+                                <div class="set-row grid grid-cols-3 gap-2">
+                                    <input type="number" placeholder="3" class="set-input w-full bg-slate-800 border border-slate-700 rounded-lg p-1 text-center text-xs text-white">
+                                    <input type="number" placeholder="10" class="rep-input w-full bg-slate-800 border border-slate-700 rounded-lg p-1 text-center text-xs text-white">
+                                    <input type="number" placeholder="45" class="weight-input w-full bg-slate-800 border border-slate-700 rounded-lg p-1 text-center text-xs text-white">
+                                </div>
+                                <div class="set-row grid grid-cols-3 gap-2">
+                                    <input type="number" placeholder="3" class="set-input w-full bg-slate-800 border border-slate-700 rounded-lg p-1 text-center text-xs text-white">
+                                    <input type="number" placeholder="10" class="rep-input w-full bg-slate-800 border border-slate-700 rounded-lg p-1 text-center text-xs text-white">
+                                    <input type="number" placeholder="45" class="weight-input w-full bg-slate-800 border border-slate-700 rounded-lg p-1 text-center text-xs text-white">
+                                </div>
+                            </div>
+                            <button type="button" onclick="addSetRow()" class="mt-2 w-full border border-dashed border-slate-600 hover:border-purple-500 text-slate-500 hover:text-purple-400 text-xs font-bold rounded-lg py-1.5 transition">+ Add Row</button>
                         </div>
 
                         <div id="metrics-time" class="hidden">
@@ -1039,6 +1059,31 @@
             rebuildEngine();
         }
 
+        function addSetRow() {
+            const container = document.getElementById('set-rows');
+            const row = document.createElement('div');
+            row.className = 'set-row grid grid-cols-3 gap-2';
+            row.innerHTML = `
+                <input type="number" placeholder="3" class="set-input w-full bg-slate-800 border border-slate-700 rounded-lg p-1 text-center text-xs text-white">
+                <input type="number" placeholder="10" class="rep-input w-full bg-slate-800 border border-slate-700 rounded-lg p-1 text-center text-xs text-white">
+                <input type="number" placeholder="45" class="weight-input w-full bg-slate-800 border border-slate-700 rounded-lg p-1 text-center text-xs text-white">`;
+            container.appendChild(row);
+        }
+
+        function resetSetRows() {
+            const container = document.getElementById('set-rows');
+            container.innerHTML = '';
+            for (let i = 0; i < 3; i++) {
+                const row = document.createElement('div');
+                row.className = 'set-row grid grid-cols-3 gap-2';
+                row.innerHTML = `
+                    <input type="number" placeholder="3" class="set-input w-full bg-slate-800 border border-slate-700 rounded-lg p-1 text-center text-xs text-white">
+                    <input type="number" placeholder="10" class="rep-input w-full bg-slate-800 border border-slate-700 rounded-lg p-1 text-center text-xs text-white">
+                    <input type="number" placeholder="45" class="weight-input w-full bg-slate-800 border border-slate-700 rounded-lg p-1 text-center text-xs text-white">`;
+                container.appendChild(row);
+            }
+        }
+
         function renderPixelAvatar(index) {
             const active = pixelAvatars[index];
             const svgEl = document.getElementById('avatar-svg');
@@ -1068,13 +1113,23 @@
 
             if (selectedFormat === 'time') {
                 entry.time = parseInt(document.getElementById('input-time').value) || 0;
+                userData.history.push(entry);
             } else {
-                entry.sets = parseInt(document.getElementById('input-sets').value) || 1;
-                entry.reps = parseInt(document.getElementById('input-reps').value) || 1;
-                entry.weight = parseInt(document.getElementById('input-weight').value) || 0;
+                // Collect all filled rows; each row becomes its own log entry
+                const rows = document.querySelectorAll('#set-rows .set-row');
+                const setEntries = [];
+                rows.forEach(row => {
+                    const s = parseInt(row.querySelector('.set-input').value) || 0;
+                    const r = parseInt(row.querySelector('.rep-input').value) || 0;
+                    const w = parseInt(row.querySelector('.weight-input').value) || 0;
+                    if (s > 0 || r > 0 || w > 0) setEntries.push({ sets: s || 1, reps: r || 1, weight: w });
+                });
+                if (setEntries.length === 0) return alert("Enter at least one set.");
+                setEntries.forEach((se, i) => {
+                    userData.history.push({ ...entry, id: 'log_' + Date.now() + '_' + i, sets: se.sets, reps: se.reps, weight: se.weight });
+                });
+                resetSetRows();
             }
-
-            userData.history.push(entry);
             clearMuscleSelection();
 
             // Health regen: STR/STA/AGI workouts restore up to 30% HP per calendar day
