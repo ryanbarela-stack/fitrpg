@@ -94,6 +94,13 @@
                                 <span>↑</span> Import Save
                             </button>
                             <div class="border-t border-slate-900 my-1"></div>
+                            <button onclick="exportBattleCard()" class="w-full text-left text-[11px] text-amber-400 hover:bg-amber-500/10 font-bold uppercase px-2.5 py-2 rounded-lg transition flex items-center gap-2">
+                                <span>⚔</span> Export Battle Card
+                            </button>
+                            <button onclick="showChallengeModal()" class="w-full text-left text-[11px] text-red-400 hover:bg-red-500/10 font-bold uppercase px-2.5 py-2 rounded-lg transition flex items-center gap-2">
+                                <span>🏆</span> Challenge a Hero
+                            </button>
+                            <div class="border-t border-slate-900 my-1"></div>
                             <button onclick="resetData()" class="w-full text-left text-[11px] text-red-400 hover:bg-red-500/10 font-bold uppercase px-2.5 py-2 rounded-lg transition flex items-center gap-2">
                                 <span>⚠</span> Clear Profile Sync
                             </button>
@@ -493,6 +500,44 @@
 
             <div class="px-5 py-3 border-t border-slate-800 text-center">
                 <button onclick="closeAboutModal()" class="bg-gradient-to-r from-purple-600 to-cyan-600 text-white font-bold py-2.5 px-8 rounded-lg text-xs uppercase heading-font tracking-wider transition min-h-[44px]">Close Manual</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Challenge Modal -->
+    <div id="challenge-modal" class="hidden fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-amber-500/30 rounded-xl p-5 w-full max-w-sm shadow-2xl">
+            <h3 class="text-sm font-bold heading-font text-amber-400 uppercase tracking-wider mb-1">⚔ Challenge a Hero</h3>
+            <p class="text-[10px] text-gray-400 font-mono mb-3">Paste your opponent's Battle Card JSON below to begin combat.</p>
+            <textarea id="challenge-textarea" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-xs text-white font-mono h-32 resize-none placeholder-slate-600" placeholder='{"name": "...", "level": 5, "stats": {...}}'></textarea>
+            <div class="flex gap-2 mt-3">
+                <button onclick="startBattle()" class="flex-1 bg-gradient-to-r from-amber-600 to-red-600 text-white font-bold py-2.5 rounded-lg text-xs uppercase heading-font tracking-wider transition min-h-[44px]">⚔ Fight!</button>
+                <button onclick="closeChallengeModal()" class="flex-1 border border-slate-700 text-slate-400 hover:text-white font-bold py-2.5 rounded-lg text-xs uppercase font-mono tracking-wider transition min-h-[44px]">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Battle Result Modal -->
+    <div id="battle-modal" class="hidden fixed inset-0 bg-black/90 z-50 flex items-start justify-center p-4 overflow-y-auto">
+        <div class="bg-slate-900 border border-red-500/30 rounded-xl w-full max-w-lg shadow-2xl my-4">
+            <div class="flex items-center justify-between px-5 py-4 border-b border-slate-800">
+                <h2 id="battle-title" class="text-base font-bold heading-font text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-red-400 tracking-wider">BATTLE REPORT</h2>
+                <button onclick="closeBattleModal()" class="text-slate-500 hover:text-white text-xl font-bold leading-none px-2 py-1 rounded transition">✕</button>
+            </div>
+            <!-- Fighter Cards -->
+            <div class="grid grid-cols-2 gap-3 px-5 py-4 border-b border-slate-800">
+                <div id="fighter-you" class="bg-slate-800 rounded-lg p-3 text-center border border-slate-700"></div>
+                <div id="fighter-opp" class="bg-slate-800 rounded-lg p-3 text-center border border-slate-700"></div>
+            </div>
+            <!-- Battle Log -->
+            <div class="px-5 py-3">
+                <div class="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-2">Combat Log</div>
+                <div id="battle-log" class="space-y-1 max-h-64 overflow-y-auto font-mono text-[11px]"></div>
+            </div>
+            <!-- Result Banner -->
+            <div id="battle-result-banner" class="px-5 pb-4 text-center"></div>
+            <div class="px-5 py-3 border-t border-slate-800 text-center">
+                <button onclick="closeBattleModal()" class="bg-gradient-to-r from-amber-600 to-red-600 text-white font-bold py-2.5 px-8 rounded-lg text-xs uppercase heading-font tracking-wider transition min-h-[44px]">Close</button>
             </div>
         </div>
     </div>
@@ -1291,6 +1336,168 @@
                 item.innerHTML = `<div><span class="text-purple-400 font-bold">[Day ${log.date.slice(8)}]</span> ${statTag} <span class="text-white">${displayName}</span> <span class="text-gray-500">(${detailText})</span></div><button onclick="removeLog('${log.id}')" class="text-red-500 hover:text-red-400 font-bold ml-2">✕</button>`;
                 logBox.appendChild(item);
             });
+        }
+
+        // ── BATTLE SYSTEM ──────────────────────────────────────────────
+
+        function getBattleStats() {
+            // Re-derive current character stats from history (same logic as rebuildEngine)
+            let stats = { str: 10, sta: 10, agi: 10, wis: 10, int: 10 };
+            let exp = 0, level = 1, nextLevelExp = 250;
+            let dailyActivityCount = {};
+            const sorted = [...userData.history].sort((a,b) => new Date(a.date) - new Date(b.date));
+            sorted.forEach(log => {
+                let statType = log.statType || 'str';
+                let format = log.format || 'weight';
+                let baseExp = 12;
+                if (log.exerciseId) {
+                    const ex = exercises.find(e => e.id === log.exerciseId);
+                    if (!ex) return;
+                    statType = ex.type; format = ex.format; baseExp = ex.exp;
+                }
+                const dayKey = `${log.date}_${log.name || log.exerciseId}`;
+                dailyActivityCount[dayKey] = (dailyActivityCount[dayKey] || 0) + 1;
+                const currentClass = pixelAvatars[userData.avatarIndex]?.name;
+                const dupPenalty = currentClass === 'Rogue' ? 0.65 : 0.5;
+                const spam = dailyActivityCount[dayKey] > 1 ? dupPenalty : 1.0;
+                let loadMod = format === 'time' ? (log.time || 30) / 30 : 1 + (log.weight * 0.001) + (log.sets * 0.03) + ((log.reps || 10) * 0.005);
+                const cb = classBonuses[currentClass];
+                const expMult = cb ? cb.apply(statType, 1.0) : 1.0;
+                stats[statType] += 0.08 * loadMod * spam;
+                exp += Math.floor(baseExp * loadMod * spam * expMult);
+            });
+            let attrLevels = {};
+            ['str','sta','agi','wis','int'].forEach(s => { attrLevels[s] = Math.floor((stats[s] - 10) / 5) + 1; });
+            const lowestAttr = Math.min(...Object.values(attrLevels));
+            while (exp >= nextLevelExp && level < lowestAttr) { exp -= nextLevelExp; level++; nextLevelExp = Math.floor(nextLevelExp * 1.5); }
+            const className = pixelAvatars[userData.avatarIndex]?.name || 'Warrior';
+            return { name: `Hero Lv.${level}`, level, className, stats };
+        }
+
+        function exportBattleCard() {
+            document.getElementById('settings-dropdown').classList.add('hidden');
+            const card = getBattleStats();
+            const json = JSON.stringify(card);
+            navigator.clipboard.writeText(json).then(() => {
+                alert('Battle Card copied to clipboard! Share it with your opponent.');
+            }).catch(() => {
+                prompt('Copy your Battle Card:', json);
+            });
+        }
+
+        function showChallengeModal() {
+            document.getElementById('settings-dropdown').classList.add('hidden');
+            document.getElementById('challenge-modal').classList.remove('hidden');
+        }
+
+        function closeChallengeModal() {
+            document.getElementById('challenge-modal').classList.add('hidden');
+            document.getElementById('challenge-textarea').value = '';
+        }
+
+        function closeBattleModal() {
+            document.getElementById('battle-modal').classList.add('hidden');
+        }
+
+        function calcCombatStats(s) {
+            return {
+                hp:    100 + Math.max(0, s.sta - 10) * 5,
+                atk:   Math.max(1, (s.str - 10) * 2 + 5),
+                magic: Math.max(0, (s.int - 10) * 1.5),
+                speed: s.agi,
+                heal:  Math.max(0, (s.wis - 10) * 0.5),
+                crit:  Math.min(0.4, Math.max(0, (s.agi - 10) * 0.02))
+            };
+        }
+
+        function runCombatSim(you, opp) {
+            const yC = calcCombatStats(you.stats);
+            const oC = calcCombatStats(opp.stats);
+            let yHp = yC.hp, oHp = oC.hp;
+            const log = [];
+            const MAX_ROUNDS = 50;
+
+            // Higher AGI goes first; ties go to you
+            let yourTurn = yC.speed >= oC.speed;
+
+            for (let round = 1; round <= MAX_ROUNDS; round++) {
+                log.push({ type: 'round', text: `── Round ${round} ──` });
+
+                for (let half = 0; half < 2; half++) {
+                    if (yourTurn) {
+                        const isCrit = Math.random() < yC.crit;
+                        const dmg = Math.floor((yC.atk + yC.magic) * (isCrit ? 1.5 : 1));
+                        oHp -= dmg;
+                        log.push({ type: 'you', text: `You hit ${opp.name} for ${dmg}${isCrit ? ' 💥 CRIT' : ''} dmg! (${Math.max(0,Math.ceil(oHp))} HP left)` });
+                        if (oHp <= 0) return { winner: 'you', log };
+                    } else {
+                        const isCrit = Math.random() < oC.crit;
+                        const dmg = Math.floor((oC.atk + oC.magic) * (isCrit ? 1.5 : 1));
+                        yHp -= dmg;
+                        log.push({ type: 'opp', text: `${opp.name} hits you for ${dmg}${isCrit ? ' 💥 CRIT' : ''} dmg! (${Math.max(0,Math.ceil(yHp))} HP left)` });
+                        if (yHp <= 0) return { winner: 'opp', log };
+                    }
+                    yourTurn = !yourTurn;
+                }
+
+                // End-of-round passive heals
+                yHp = Math.min(yC.hp, yHp + yC.heal);
+                oHp = Math.min(oC.hp, oHp + oC.heal);
+                if (yC.heal > 0) log.push({ type: 'heal', text: `You regenerate ${yC.heal.toFixed(1)} HP.` });
+                if (oC.heal > 0) log.push({ type: 'heal', text: `${opp.name} regenerates ${oC.heal.toFixed(1)} HP.` });
+            }
+            // Timeout — whoever has more HP wins
+            return { winner: yHp >= oHp ? 'you' : 'opp', log, timeout: true };
+        }
+
+        function renderFighterCard(el, fighter, combatStats, isYou) {
+            el.innerHTML = `
+                <div class="text-[10px] font-bold uppercase tracking-widest font-mono ${isYou ? 'text-cyan-400' : 'text-red-400'} mb-1">${isYou ? 'YOU' : 'OPPONENT'}</div>
+                <div class="text-sm font-bold text-white heading-font">${escapeHtml(fighter.name)}</div>
+                <div class="text-[10px] text-purple-300 font-mono mb-2">${escapeHtml(fighter.className || '')}</div>
+                <div class="space-y-0.5 text-[10px] font-mono text-left">
+                    <div class="flex justify-between"><span class="text-red-400">HP Pool</span><span class="text-white">${combatStats.hp}</span></div>
+                    <div class="flex justify-between"><span class="text-orange-400">Attack</span><span class="text-white">${combatStats.atk}</span></div>
+                    <div class="flex justify-between"><span class="text-fuchsia-400">Magic</span><span class="text-white">${combatStats.magic.toFixed(1)}</span></div>
+                    <div class="flex justify-between"><span class="text-amber-400">Speed</span><span class="text-white">${combatStats.speed.toFixed(1)}</span></div>
+                    <div class="flex justify-between"><span class="text-cyan-400">Heal/rd</span><span class="text-white">${combatStats.heal.toFixed(1)}</span></div>
+                    <div class="flex justify-between"><span class="text-green-400">Crit%</span><span class="text-white">${(combatStats.crit * 100).toFixed(0)}%</span></div>
+                </div>`;
+        }
+
+        function startBattle() {
+            const text = document.getElementById('challenge-textarea').value.trim();
+            let opp;
+            try {
+                opp = JSON.parse(text);
+                if (!opp.stats || !opp.name) throw new Error();
+            } catch(e) {
+                alert('Invalid Battle Card. Make sure you paste the full copied JSON.');
+                return;
+            }
+            closeChallengeModal();
+
+            const you = getBattleStats();
+            const result = runCombatSim(you, opp);
+            const yC = calcCombatStats(you.stats);
+            const oC = calcCombatStats(opp.stats);
+
+            renderFighterCard(document.getElementById('fighter-you'), you, yC, true);
+            renderFighterCard(document.getElementById('fighter-opp'), opp, oC, false);
+
+            const logEl = document.getElementById('battle-log');
+            logEl.innerHTML = result.log.map(entry => {
+                const cls = entry.type === 'round' ? 'text-slate-500' : entry.type === 'you' ? 'text-cyan-300' : entry.type === 'opp' ? 'text-red-300' : 'text-green-400';
+                return `<div class="${cls}">${escapeHtml(entry.text)}</div>`;
+            }).join('');
+
+            const banner = document.getElementById('battle-result-banner');
+            const youWon = result.winner === 'you';
+            const timeoutNote = result.timeout ? ' <span class="text-slate-500">(timeout — most HP wins)</span>' : '';
+            banner.innerHTML = `<div class="mt-2 text-lg font-bold heading-font ${youWon ? 'text-cyan-400' : 'text-red-400'}">${youWon ? '🏆 VICTORY!' : '💀 DEFEATED'}</div><div class="text-xs text-gray-400 font-mono mt-1">${youWon ? `You defeated ${escapeHtml(opp.name)}!` : `${escapeHtml(opp.name)} was victorious.`}${timeoutNote}</div>`;
+
+            document.getElementById('battle-modal').classList.remove('hidden');
+            logEl.scrollTop = logEl.scrollHeight;
         }
     </script>
 </body>
