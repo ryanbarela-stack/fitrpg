@@ -415,7 +415,7 @@
                     <div class="text-[10px] text-red-400 font-bold uppercase tracking-widest mb-2 border-b border-slate-800 pb-1">❤ Health Bar</div>
                     <div class="space-y-1.5 text-gray-400 leading-relaxed">
                         <div>HP starts at <span class="text-white">100%</span> and decays at <span class="text-white">1% per hour</span> in real time — even when the app is closed.</div>
-                        <div>Logging a <span class="text-red-400 font-bold">STR</span>, <span class="text-green-400 font-bold">STA</span>, or <span class="text-amber-400 font-bold">AGI</span> workout restores <span class="text-white">+10% HP</span> (max once per calendar day).</div>
+                        <div>Logging a <span class="text-red-400 font-bold">STR</span>, <span class="text-green-400 font-bold">STA</span>, or <span class="text-amber-400 font-bold">AGI</span> workout restores <span class="text-white">+30% HP</span> (max once per calendar day).</div>
                         <div>If HP reaches <span class="text-white">0%</span>, your displayed Hero Level resets to <span class="text-white">Lv. 1</span> until you restore HP above 0%.</div>
                     </div>
                 </section>
@@ -1025,13 +1025,13 @@
             userData.history.push(entry);
             clearMuscleSelection();
 
-            // Health regen: STR/STA/AGI workouts restore up to 10% HP per calendar day
+            // Health regen: STR/STA/AGI workouts restore up to 30% HP per calendar day
             if (['str', 'sta', 'agi'].includes(selectedStat)) {
                 const regenSoFar = userData.healthRegenDates[entry.date] || 0;
-                if (regenSoFar < 10) {
-                    const regen = 10 - regenSoFar;
+                if (regenSoFar < 30) {
+                    const regen = 30 - regenSoFar;
                     userData.health = Math.min(100, userData.health + regen);
-                    userData.healthRegenDates[entry.date] = 10;
+                    userData.healthRegenDates[entry.date] = 30;
                 }
             }
 
