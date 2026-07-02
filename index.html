@@ -738,7 +738,7 @@
             userData.foodLog.push({
                 id: 'food_' + Date.now(),
                 text,
-                date: now.toISOString().slice(0, 10),
+                date: localDateStr(now),
                 time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
             });
             saveToStorage();
@@ -878,8 +878,15 @@
             }
         }
 
+        function localDateStr(d) {
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${y}-${m}-${day}`;
+        }
+
         window.onload = function() {
-            document.getElementById('input-date').value = new Date().toISOString().slice(0, 10);
+            document.getElementById('input-date').value = localDateStr(new Date());
             loadFromStorage();
             applyHealthDecay();
             initApp();
@@ -1065,7 +1072,7 @@
             let calendarMap = {};
             let dailyActivityCount = {};
 
-            const todayStr = new Date().toISOString().slice(0, 10);
+            const todayStr = localDateStr(new Date());
             const sortedHistory = [...userData.history].sort((a,b) => new Date(a.date) - new Date(b.date));
 
             sortedHistory.forEach(log => {
